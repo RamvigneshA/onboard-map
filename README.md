@@ -1,11 +1,31 @@
 # onboard-map 🗺️
 
-`onboard-map` is a professional CLI and interactive visualizer that parses a TypeScript/React codebase's import graph, cross-references it with local git history, and outputs deep-dive diagnostic reports through two different organizational lenses:
+`onboard-map` is a professional, enterprise-grade CLI and interactive visualizer that parses a TypeScript/React codebase's import graph, cross-references it with local git history, and outputs high-fidelity diagnostic reports through two different organizational lenses:
 
 *   **🔍 Day 1 New Hire**: Answers *"Where do I start reading? What's safe to touch? Who owns what?"*
 *   **🧠 Staff Architect**: Answers *"Where is architectural risk concentrated? Where are coupling bottlenecks, circular chains, or siloed bus-factors?"*
 
 All analysis runs **100% locally and offline** using `ts-morph` and local `git` log queries—no external networks, third-party API keys, or SaaS tokens are required.
+
+---
+
+## ✨ Key Refinements & Features (v1.1.0)
+
+Our latest version brings major improvements to detection accuracy, security, scoring, and automated reporting:
+
+1.  **🔍 Structurally Precise Workspace Detection**: Correctly distinguishes between a **Single Package Application** and various **Monorepo types** (including Nx, Turborepo, Lerna, pnpm, and npm Workspaces).
+2.  **📦 Exact Framework & Language Versions**: Extracts exact versions of React, TypeScript, Next.js, etc., from `package.json` (e.g., `React 19.1.0`, `TypeScript 5.8.3`) rather than just reporting the major version.
+3.  **🧬 Intelligent Node Version Priority**: Auto-detects target Node requirements by auditing sequentially: `package.json -> engines.node` ➔ `.nvmrc` ➔ `.node-version`. If missing, reports as `⚠ Not specified`.
+4.  **📘 Deep TypeScript Audit**: Evaluates the compiler state for quality-of-life configs (`strict`, `noImplicitAny`, `strictNullChecks`, `paths`, `baseUrl`, and `moduleResolution`).
+5.  **🧠 Fine-Grained State Management Scans**: Correctly identifies external state systems (Redux, Zustand, Jotai, MobX, Recoil, TanStack Query, Apollo Client) while distinguishing local Component state (`useState`/`useReducer`).
+6.  **🎨 Multi-Factor Shadcn UI Validation**: Properly validates Shadcn setup by checking `components.json`, verifying the presence of `components/ui` or `src/components/ui`, and scanning `@radix-ui/` dependency signatures.
+7.  **🚀 Smart Deployment Detection**: Scans package scripts for Vercel, Netlify, and Firebase, as well as checking for active `.github` action workflows.
+8.  **🔒 Automated Security Audits**: Verifies the presence of `.gitignore`, checks if sensitive environmental files (`.env`) are correctly ignored, and looks for automated security scanning engines or Dependabot configurations.
+9.  **📦 Dependency Health Metric**: Displays direct, production, and dev dependency counts. Warns if dependencies exceed recommended limits (>100 packages).
+10. **📊 Balanced & Fair Health Scoring**: Calibrates scores over 10 balanced categories (10 pts each), ensuring that missing test suites reduce points realistically without completely decimating the overall score.
+11. **💡 Prioritized Recommendations**: Sorts action items by severity level (`🔴 Critical` ➔ `🟡 Warning` ➔ `🔵 Suggestion`) for clear team prioritization.
+12. **📝 Professional Markdown PR Reports**: Automatically generates and saves a beautifully structured, comprehensive markdown audit report to `frontend-health-report.md` on every run, ready to attach directly to GitHub Pull Requests.
+13. **⚙️ Machine-Readable Structured JSON Output**: Optimized `onboard-map --json` structure returning standardized, nested outputs for easy pipeline integration.
 
 ---
 
@@ -39,7 +59,7 @@ Specify a custom directory to analyze:
 node dist/cli.js --dir /path/to/another/project
 ```
 
-Output as raw, structured **JSON** for machine consumption:
+Output as raw, structured, standardized **JSON** for machine consumption:
 ```bash
 node dist/cli.js --json
 ```
