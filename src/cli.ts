@@ -12,6 +12,7 @@ import { ContextBuilder } from './core/context';
 import { CodebaseEngine } from './core/engine';
 import { TerminalReporter } from './reporters/terminal.reporter';
 import { JsonReporter } from './reporters/json.reporter';
+import { MarkdownReporter } from './reporters/markdown.reporter';
 
 const program = new Command();
 
@@ -20,6 +21,7 @@ program
   .description('Onboarding and Architecture analyzer for TypeScript/React codebases')
   .version('1.0.0')
   .option('-j, --json', 'Output report in JSON format')
+  .option('--md', 'Output report in Markdown format')
   .option('-d, --deep', 'Run additive deep checks for staff/architect level findings')
   .option('--dir <path>', 'Path to target directory (defaults to current working directory)', '.')
   .action(async (options) => {
@@ -35,6 +37,7 @@ program
       // 1. Build Shared Context
       // Since rootDir is always the main workspace, we can walk from the selected targetPath
       const { context, isRealGit } = ContextBuilder.build(targetPath);
+      context.isDeep = !!options.deep;
 
       // Guess project name
       let projectName = path.basename(targetPath);
@@ -61,6 +64,9 @@ program
       if (options.json) {
         const jsonReporter = new JsonReporter();
         console.log(jsonReporter.render(results, meta));
+      } else if (options.md) {
+        const markdownReporter = new MarkdownReporter();
+        console.log(markdownReporter.render(results, meta));
       } else {
         const terminalReporter = new TerminalReporter();
         console.log(terminalReporter.render(results, meta));

@@ -39,6 +39,7 @@ app.get('/api/analyze', async (req, res) => {
 
     const startTime = Date.now();
     const { context, isRealGit } = ContextBuilder.build(scanDir);
+    context.isDeep = runDeep;
     
     let projectName = path.basename(scanDir);
     if (context.packageJson && context.packageJson.name) {
@@ -106,6 +107,7 @@ app.post('/api/upload-zip', async (req, res) => {
 
     const startTime = Date.now();
     const { context, isRealGit } = ContextBuilder.build(scanPath);
+    context.isDeep = true;
 
     let projectName = req.headers['x-filename']
       ? String(req.headers['x-filename']).replace(/\.zip$/i, '')

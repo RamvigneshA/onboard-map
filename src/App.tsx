@@ -99,7 +99,7 @@ export default function App() {
   const [data, setData] = useState<AnalysisData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lens, setLens] = useState<'new-hire' | 'staff'>('new-hire');
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'graph' | 'terminal'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'graph' | 'terminal' | 'health'>('health');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [isDeepScan, setIsDeepScan] = useState<boolean>(true);
@@ -511,6 +511,22 @@ export default function App() {
             {/* View Selector Card */}
             <div className="bg-zinc-900 border border-zinc-900 rounded-xl p-4 space-y-2">
               <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">View Modes</h3>
+
+              <button 
+                id="tab-health"
+                onClick={() => setActiveTab('health')}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm font-medium transition ${
+                  activeTab === 'health' 
+                    ? 'bg-gradient-to-r from-cyan-950/40 to-indigo-950/40 text-cyan-300 border border-cyan-800/60 shadow-lg shadow-cyan-950/25' 
+                    : 'text-zinc-400 hover:bg-zinc-800/50'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <ShieldCheck className="h-4 w-4 text-cyan-400" />
+                  <span className="font-semibold">Ecosystem Health</span>
+                </div>
+                <span className="text-[10px] bg-cyan-950 text-cyan-400 px-1.5 py-0.5 rounded border border-cyan-900/60 font-mono font-bold uppercase">New</span>
+              </button>
               
               <button 
                 id="tab-dashboard"
@@ -1169,6 +1185,381 @@ export default function App() {
 
               </div>
             )}
+
+            {/* Ecosystem Health View */}
+            {!loading && data && activeTab === 'health' && (() => {
+              const scoreCheck = getCheck('health-score');
+              const recsCheck = getCheck('recommendations');
+              const breakdown = scoreCheck?.details.scoreBreakdown || { overall: 0, categories: [] };
+              const recommendations = recsCheck?.details.recommendations || [];
+
+              return (
+                <div className="space-y-6">
+                  {/* Score & Category breakdown banner */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Circle overall score */}
+                    <div className="md:col-span-1 bg-zinc-900 border border-zinc-900 p-6 rounded-2xl flex flex-col items-center justify-center text-center relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-indigo-500/5 pointer-events-none" />
+                      <span className="text-xs text-zinc-500 uppercase font-bold tracking-wider font-mono mb-2">Overall Health Score</span>
+                      <div className="relative flex items-center justify-center h-36 w-36 rounded-full border-4 border-zinc-800 shadow-xl shadow-cyan-950/10">
+                        <div className="absolute inset-2 rounded-full bg-zinc-950 flex flex-col items-center justify-center">
+                          <span className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-indigo-400 font-mono">
+                            {breakdown.overall}
+                          </span>
+                          <span className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider font-mono">out of 100</span>
+                        </div>
+                        {/* Interactive gauge color ring */}
+                        <svg className="absolute inset-0 transform -rotate-90" viewBox="0 0 100 100">
+                          <circle
+                            cx="50"
+                            cy="50"
+                            r="46"
+                            fill="transparent"
+                            stroke={breakdown.overall >= 80 ? '#10b981' : breakdown.overall >= 50 ? '#f59e0b' : '#ef4444'}
+                            strokeWidth="4"
+                            strokeDasharray={2 * Math.PI * 46}
+                            strokeDashoffset={2 * Math.PI * 46 * (1 - breakdown.overall / 100)}
+                            className="opacity-70 transition-all duration-1000 ease-out"
+                          />
+                        </svg>
+                      </div>
+                      <p className="text-xs text-zinc-400 mt-4 leading-relaxed px-2">
+                        {breakdown.overall >= 85 
+                          ? 'Excellent architecture health! This repository is highly organized and follows production standards.' 
+                          : breakdown.overall >= 70 
+                            ? 'Good repository structure but some essential quality tools or tests are missing.' 
+                            : 'Critical health warnings detected. Recommend scheduling refactoring sprints immediately.'}
+                      </p>
+                    </div>
+
+                    {/* Progress bars listing categories */}
+                    <div className="md:col-span-2 bg-zinc-900 border border-zinc-900 p-6 rounded-2xl space-y-4">
+                      <h3 className="text-sm font-bold text-white font-mono uppercase tracking-wider flex items-center gap-2">
+                        <Activity className="h-4 w-4 text-cyan-400" />
+                        Scoring Breakdown
+                      </h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3.5">
+                        {breakdown.categories.map((cat: any) => {
+                          const percent = Math.round((cat.score / cat.max) * 100);
+                          return (
+                            <div key={cat.name} className="space-y-1.5">
+                              <div className="flex justify-between text-xs font-mono">
+                                <span className="text-zinc-400">{cat.name}</span>
+                                <span className="text-zinc-300 font-bold">{cat.score} / {cat.max}</span>
+                              </div>
+                              <div className="h-2 w-full bg-zinc-950 rounded-full overflow-hidden border border-zinc-900">
+                                <div 
+                                  className={`h-full rounded-full transition-all duration-1000 ${
+                                    percent >= 80 
+                                      ? 'bg-gradient-to-r from-emerald-500 to-teal-500' 
+                                      : percent >= 50 
+                                        ? 'bg-gradient-to-r from-amber-500 to-orange-500' 
+                                        : 'bg-gradient-to-r from-red-500 to-rose-500'
+                                  }`}
+                                  style={{ width: `${percent}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Recommendations */}
+                  {recommendations.length > 0 && (
+                    <div className="bg-zinc-900 border border-zinc-900 rounded-2xl p-6">
+                      <h3 className="text-sm font-bold text-white font-mono uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <Sparkles className="h-4.5 w-4.5 text-cyan-400" />
+                        Actionable Recommendations ({recommendations.length})
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {recommendations.map((rec: any, idx: number) => {
+                          const isRisk = rec.severity === 'risk';
+                          const isWarn = rec.severity === 'warn';
+                          return (
+                            <div 
+                              key={idx} 
+                              className={`p-4 rounded-xl border flex gap-3.5 transition-all hover:bg-zinc-800/10 ${
+                                isRisk 
+                                  ? 'bg-red-950/5 border-red-900/40 hover:border-red-900/60' 
+                                  : isWarn 
+                                    ? 'bg-amber-950/5 border-amber-900/40 hover:border-amber-900/60' 
+                                    : 'bg-blue-950/5 border-zinc-800 hover:border-zinc-700'
+                              }`}
+                            >
+                              <div className="mt-0.5">
+                                {isRisk ? (
+                                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-950/50 text-red-400 border border-red-900/60 text-[10px] font-bold font-mono">✖</span>
+                                ) : isWarn ? (
+                                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-950/50 text-amber-400 border border-amber-900/60 text-[10px] font-bold font-mono">!</span>
+                                ) : (
+                                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700 text-[10px] font-bold font-mono">i</span>
+                                )}
+                              </div>
+                              <div className="space-y-1">
+                                <h4 className={`text-xs font-bold font-mono ${isRisk ? 'text-red-400' : isWarn ? 'text-amber-400' : 'text-zinc-200'}`}>
+                                  {rec.title}
+                                </h4>
+                                <p className="text-[11px] text-zinc-400 leading-relaxed font-light">{rec.why}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Findings detail cards grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Project Information */}
+                    {getCheck('project-info') && (() => {
+                      const details = getCheck('project-info')!.details;
+                      return (
+                        <div className="bg-zinc-900 border border-zinc-900 p-5 rounded-xl space-y-3">
+                          <h4 className="text-xs font-bold text-white font-mono uppercase tracking-wider border-b border-zinc-800 pb-2">📦 Project Info</h4>
+                          <div className="space-y-2 text-xs font-mono">
+                            <div className="flex justify-between"><span className="text-zinc-500">Name:</span><span className="text-zinc-300 font-semibold">{details.name}</span></div>
+                            <div className="flex justify-between"><span className="text-zinc-500">Version:</span><span className="text-zinc-300">{details.version}</span></div>
+                            <div className="flex justify-between"><span className="text-zinc-500">Package Manager:</span><span className="text-zinc-300 uppercase">{details.packageManager}</span></div>
+                            <div className="flex justify-between"><span className="text-zinc-500">Node Engine:</span><span className="text-zinc-300">{details.nodeVersion || 'Not restricted'}</span></div>
+                            <div className="flex justify-between"><span className="text-zinc-500">Git Setup:</span><span className={details.hasGit ? 'text-emerald-400' : 'text-amber-400'}>{details.hasGit ? 'Active' : 'Missing'}</span></div>
+                            <div className="flex justify-between"><span className="text-zinc-500">Ecosystem:</span><span className="text-cyan-400 uppercase font-bold">{details.workspaceType}</span></div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* TypeScript Check */}
+                    {getCheck('typescript') && (() => {
+                      const details = getCheck('typescript')!.details;
+                      return (
+                        <div className="bg-zinc-900 border border-zinc-900 p-5 rounded-xl space-y-3">
+                          <h4 className="text-xs font-bold text-white font-mono uppercase tracking-wider border-b border-zinc-800 pb-2">📘 TypeScript Compiler</h4>
+                          <div className="space-y-2 text-xs">
+                            <div className="flex justify-between items-center"><span className="text-zinc-500 font-mono">TypeScript Installed:</span><span className={details.isInstalled ? 'text-emerald-400 font-semibold' : 'text-red-400 font-semibold'}>{details.isInstalled ? 'Yes' : 'No'}</span></div>
+                            <div className="flex justify-between items-center"><span className="text-zinc-500 font-mono">tsconfig.json Found:</span><span className={details.hasTsConfig ? 'text-emerald-400 font-semibold' : 'text-red-400 font-semibold'}>{details.hasTsConfig ? 'Yes' : 'No'}</span></div>
+                            <div className="flex justify-between items-center"><span className="text-zinc-500 font-mono">strict Option:</span><span className={details.strict ? 'text-emerald-400 font-semibold' : 'text-amber-400 font-semibold'}>{details.strict ? 'Enabled' : 'Disabled'}</span></div>
+                            <div className="flex justify-between items-center"><span className="text-zinc-500 font-mono">noImplicitAny Option:</span><span className={details.noImplicitAny ? 'text-emerald-400 font-semibold' : 'text-amber-400 font-semibold'}>{details.noImplicitAny ? 'Enabled' : 'Disabled'}</span></div>
+                            <div className="flex justify-between items-center"><span className="text-zinc-500 font-mono">Base URL Config:</span><span className="text-zinc-300 font-mono">{details.baseUrl || 'None'}</span></div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Testing Check */}
+                    {getCheck('testing-stack') && (() => {
+                      const details = getCheck('testing-stack')!.details;
+                      return (
+                        <div className="bg-zinc-900 border border-zinc-900 p-5 rounded-xl space-y-3">
+                          <h4 className="text-xs font-bold text-white font-mono uppercase tracking-wider border-b border-zinc-800 pb-2">🧪 Testing Harness</h4>
+                          <div className="space-y-2 text-xs font-mono">
+                            <div className="flex flex-col gap-1">
+                              <span className="text-zinc-500">Unit / Component Utilities:</span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {details.unitTools.map((t: string) => (
+                                  <span key={t} className="px-1.5 py-0.5 rounded bg-emerald-950/30 text-emerald-400 border border-emerald-900/40 text-[10px] font-bold">{t}</span>
+                                ))}
+                                {details.unitTools.length === 0 && <span className="text-zinc-500 italic text-[11px]">No unit/render testing detected</span>}
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-1 border-t border-zinc-850/50 pt-2">
+                              <span className="text-zinc-500">End-to-End Suite:</span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {details.e2eTools.map((t: string) => (
+                                  <span key={t} className="px-1.5 py-0.5 rounded bg-emerald-950/30 text-emerald-400 border border-emerald-900/40 text-[10px] font-bold">{t}</span>
+                                ))}
+                                {details.e2eTools.length === 0 && <span className="text-zinc-500 italic text-[11px]">No E2E framework detected</span>}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Code Quality Card */}
+                    {getCheck('code-quality') && (() => {
+                      const details = getCheck('code-quality')!.details;
+                      return (
+                        <div className="bg-zinc-900 border border-zinc-900 p-5 rounded-xl space-y-3">
+                          <h4 className="text-xs font-bold text-white font-mono uppercase tracking-wider border-b border-zinc-800 pb-2">✨ Code Quality Tools</h4>
+                          <div className="space-y-2 text-xs">
+                            <div className="flex justify-between items-center"><span className="text-zinc-500 font-mono">ESLint Setup:</span><span className={details.hasESLint ? 'text-emerald-400 font-semibold' : 'text-amber-400 font-semibold'}>{details.hasESLint ? 'Configured' : 'Missing'}</span></div>
+                            <div className="flex justify-between items-center"><span className="text-zinc-500 font-mono">Prettier Setup:</span><span className={details.hasPrettier ? 'text-emerald-400 font-semibold' : 'text-amber-400 font-semibold'}>{details.hasPrettier ? 'Configured' : 'Missing'}</span></div>
+                            <div className="flex justify-between items-center"><span className="text-zinc-500 font-mono">Husky Hooks:</span><span className={details.hasHusky ? 'text-emerald-400 font-semibold' : 'text-zinc-500'}>{details.hasHusky ? 'Active' : 'Inactive'}</span></div>
+                            <div className="flex justify-between items-center"><span className="text-zinc-500 font-mono">Lint-staged:</span><span className={details.hasLintStaged ? 'text-emerald-400 font-semibold' : 'text-zinc-500'}>{details.hasLintStaged ? 'Active' : 'Inactive'}</span></div>
+                            <div className="flex justify-between items-center"><span className="text-zinc-500 font-mono">Commitlint:</span><span className={details.hasCommitlint ? 'text-emerald-400 font-semibold' : 'text-zinc-500'}>{details.hasCommitlint ? 'Active' : 'Inactive'}</span></div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Architecture Ecosystem */}
+                    <div className="bg-zinc-900 border border-zinc-900 p-5 rounded-xl space-y-3">
+                      <h4 className="text-xs font-bold text-white font-mono uppercase tracking-wider border-b border-zinc-800 pb-2">🛠️ Framework & Build</h4>
+                      <div className="space-y-2.5 text-xs">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-zinc-500 font-mono">Build Tool:</span>
+                          <span className="text-zinc-100 font-semibold bg-zinc-950 px-2.5 py-1 rounded border border-zinc-850 text-xs font-mono">{getCheck('build-tool')?.summary}</span>
+                        </div>
+                        <div className="flex flex-col gap-1 border-t border-zinc-850/50 pt-2">
+                          <span className="text-zinc-500 font-mono">Framework Stack:</span>
+                          <span className="text-zinc-100 font-semibold bg-zinc-950 px-2.5 py-1 rounded border border-zinc-850 text-xs font-mono">{getCheck('framework')?.summary}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Styling & State */}
+                    <div className="bg-zinc-900 border border-zinc-900 p-5 rounded-xl space-y-3">
+                      <h4 className="text-xs font-bold text-white font-mono uppercase tracking-wider border-b border-zinc-800 pb-2">🎨 Styling & State</h4>
+                      <div className="space-y-2.5 text-xs">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-zinc-500 font-mono">Styling Paradigm:</span>
+                          <span className="text-zinc-100 font-semibold bg-zinc-950 px-2.5 py-1 rounded border border-zinc-850 text-xs font-mono">{getCheck('styling')?.summary}</span>
+                        </div>
+                        <div className="flex flex-col gap-1 border-t border-zinc-850/50 pt-2">
+                          <span className="text-zinc-500 font-mono">State Engines:</span>
+                          <span className="text-zinc-100 font-semibold bg-zinc-950 px-2.5 py-1 rounded border border-zinc-850 text-xs font-mono">{getCheck('state-management')?.summary}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* CI/CD & Deployment */}
+                    <div className="bg-zinc-900 border border-zinc-900 p-5 rounded-xl space-y-3">
+                      <h4 className="text-xs font-bold text-white font-mono uppercase tracking-wider border-b border-zinc-800 pb-2">⚙ CI/CD & Hosting</h4>
+                      <div className="space-y-2.5 text-xs">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-zinc-500 font-mono">Deployment Configs:</span>
+                          <span className="text-zinc-100 font-semibold bg-zinc-950 px-2.5 py-1 rounded border border-zinc-850 text-xs font-mono">{getCheck('deployment')?.summary}</span>
+                        </div>
+                        <div className="flex flex-col gap-1 border-t border-zinc-850/50 pt-2">
+                          <span className="text-zinc-500 font-mono">Automated Workflows:</span>
+                          <span className="text-zinc-100 font-semibold bg-zinc-950 px-2.5 py-1 rounded border border-zinc-850 text-xs font-mono">{getCheck('ci-cd')?.summary}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Project Structure */}
+                    {getCheck('project-structure') && (() => {
+                      const details = getCheck('project-structure')!.details;
+                      return (
+                        <div className="bg-zinc-900 border border-zinc-900 p-5 rounded-xl space-y-3">
+                          <h4 className="text-xs font-bold text-white font-mono uppercase tracking-wider border-b border-zinc-800 pb-2">📁 Directory Structure</h4>
+                          <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                            <div className="flex items-center gap-1.5"><span className={details.src ? 'text-emerald-400' : 'text-zinc-600'}>●</span> <span className="text-zinc-400">src</span></div>
+                            <div className="flex items-center gap-1.5"><span className={details.components ? 'text-emerald-400' : 'text-zinc-600'}>●</span> <span className="text-zinc-400">components</span></div>
+                            <div className="flex items-center gap-1.5"><span className={details.hooks ? 'text-emerald-400' : 'text-zinc-600'}>●</span> <span className="text-zinc-400">hooks</span></div>
+                            <div className="flex items-center gap-1.5"><span className={details.lib ? 'text-emerald-400' : 'text-zinc-600'}>●</span> <span className="text-zinc-400">lib</span></div>
+                            <div className="flex items-center gap-1.5"><span className={details.utils ? 'text-emerald-400' : 'text-zinc-600'}>●</span> <span className="text-zinc-400">utils</span></div>
+                            <div className="flex items-center gap-1.5"><span className={details.public ? 'text-emerald-400' : 'text-zinc-600'}>●</span> <span className="text-zinc-400">public</span></div>
+                            <div className="flex items-center gap-1.5"><span className={details.tests ? 'text-emerald-400' : 'text-zinc-600'}>●</span> <span className="text-zinc-400">tests</span></div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Documentation & Environment */}
+                    <div className="bg-zinc-900 border border-zinc-900 p-5 rounded-xl space-y-3">
+                      <h4 className="text-xs font-bold text-white font-mono uppercase tracking-wider border-b border-zinc-800 pb-2">📚 Docs & Environment</h4>
+                      <div className="space-y-2.5 text-xs">
+                        <div className="flex flex-wrap gap-1.5">
+                          <span className="text-zinc-500 font-mono block w-full">Documentation:</span>
+                          {getCheck('documentation')?.details.foundDocs.map((d: string) => (
+                            <span key={d} className="px-1.5 py-0.5 rounded bg-zinc-950 border border-zinc-800 text-[10px] text-zinc-300 font-mono font-bold">{d}</span>
+                          ))}
+                          {getCheck('documentation')?.details.foundDocs.length === 0 && <span className="text-zinc-500 italic text-[11px]">No docs found</span>}
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 border-t border-zinc-850/50 pt-2">
+                          <span className="text-zinc-500 font-mono block w-full">Configurations:</span>
+                          {getCheck('environment')?.details.foundConfigs.map((c: string) => (
+                            <span key={c} className="px-1.5 py-0.5 rounded bg-zinc-950 border border-zinc-800 text-[10px] text-zinc-300 font-mono font-bold">{c}</span>
+                          ))}
+                          {getCheck('environment')?.details.foundConfigs.length === 0 && <span className="text-zinc-500 italic text-[11px]">No setup templates found</span>}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Dependency analysis - unused/duplicate detailed box */}
+                  {getCheck('dependency') && (() => {
+                    const details = getCheck('dependency')!.details;
+                    const hasDeepResults = details.isDeep && (details.unusedDeps.length > 0 || details.duplicateDeps.length > 0);
+                    return (
+                      <div className="bg-zinc-900 border border-zinc-900 rounded-2xl p-6 space-y-4">
+                        <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                          <h3 className="text-sm font-bold text-white font-mono uppercase tracking-wider flex items-center gap-2">
+                            <FileCode className="h-4.5 w-4.5 text-cyan-400" />
+                            Dependency Integrity Analysis
+                          </h3>
+                          <div className="text-xs text-zinc-400">
+                            Total: <span className="text-white font-bold font-mono">{details.totalDeps}</span> packages
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          <div className="space-y-1">
+                            <span className="block text-[10px] text-zinc-500 uppercase tracking-wider font-mono">Production</span>
+                            <span className="text-2xl font-bold font-mono text-cyan-400">{details.totalProd}</span>
+                            <p className="text-[11px] text-zinc-500 leading-normal">Required for server or client-side runtime environment executions.</p>
+                          </div>
+                          <div className="space-y-1">
+                            <span className="block text-[10px] text-zinc-500 uppercase tracking-wider font-mono">Development</span>
+                            <span className="text-2xl font-bold font-mono text-indigo-400">{details.totalDev}</span>
+                            <p className="text-[11px] text-zinc-500 leading-normal">Required for bundling, transpiling, linting, code formatting, and running test suites.</p>
+                          </div>
+                          <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-950/80 space-y-2">
+                            <span className="block text-[10px] text-zinc-500 uppercase tracking-wider font-mono">Deep Audit Status</span>
+                            {details.isDeep ? (
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-xs text-emerald-400 font-semibold font-mono">
+                                  <ShieldCheck className="h-4 w-4 shrink-0" />
+                                  <span>Unused package analysis active</span>
+                                </div>
+                                <p className="text-[10px] text-zinc-500">Unused and duplicated packages are audited against the dynamic dependency graph.</p>
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-xs text-amber-500 font-semibold font-mono">
+                                  <AlertTriangle className="h-4 w-4 shrink-0" />
+                                  <span>Deep audit inactive</span>
+                                </div>
+                                <p className="text-[10px] text-zinc-500">To check for unused and duplicate packages, enable the `--deep` option above and scan.</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Unused and duplicates lists */}
+                        {details.isDeep && hasDeepResults && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-zinc-850 pt-4">
+                            {details.unusedDeps.length > 0 && (
+                              <div className="space-y-2">
+                                <span className="block text-[10px] text-zinc-400 uppercase tracking-wider font-mono">Unused production packages</span>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {details.unusedDeps.map((d: string) => (
+                                    <span key={d} className="px-2 py-0.5 rounded bg-amber-950/10 text-amber-400 border border-amber-900/30 text-[10px] font-mono">{d}</span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {details.duplicateDeps.length > 0 && (
+                              <div className="space-y-2">
+                                <span className="block text-[10px] text-zinc-400 uppercase tracking-wider font-mono">Duplicate declarations (prod & dev)</span>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {details.duplicateDeps.map((d: string) => (
+                                    <span key={d} className="px-2 py-0.5 rounded bg-red-950/10 text-red-400 border border-red-900/30 text-[10px] font-mono">{d}</span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              );
+            })()}
 
             {/* Interactive Graph View */}
             {!loading && data && activeTab === 'graph' && (

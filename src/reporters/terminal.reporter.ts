@@ -230,6 +230,195 @@ export class TerminalReporter implements Reporter {
           lines.push('');
         }
       }
+
+      else if (res.id === 'project-info') {
+        lines.push(`📦 ${pc.bold('PROJECT INFORMATION')}`);
+        lines.push(`   Name:            ${res.details.name}`);
+        lines.push(`   Version:         ${res.details.version}`);
+        lines.push(`   Package Manager: ${res.details.packageManager}`);
+        lines.push(`   Node Version:    ${res.details.nodeVersion || 'Not specified'}`);
+        lines.push(`   Git Repository:  ${res.details.hasGit ? pc.green('Present') : pc.yellow('Absent')}`);
+        lines.push(`   Workspace Type:  ${res.details.workspaceType}`);
+        lines.push('');
+      }
+
+      else if (res.id === 'framework') {
+        const list = res.details.frameworks as { name: string; version?: string }[];
+        if (list && list.length > 0) {
+          lines.push(`🚀 ${pc.bold('FRAMEWORK & LANGUAGE')}`);
+          for (const f of list) {
+            const label = f.version ? `${f.name} (${f.version})` : f.name;
+            lines.push(`   ${label}`);
+          }
+          lines.push('');
+        }
+      }
+
+      else if (res.id === 'build-tool') {
+        lines.push(`🔨 ${pc.bold('BUILD TOOL')}`);
+        lines.push(`   ${res.summary}`);
+        lines.push('');
+      }
+
+      else if (res.id === 'typescript') {
+        lines.push(`📘 ${pc.bold('TYPESCRIPT')}`);
+        if (res.details.isInstalled) {
+          lines.push(`   ${pc.green('✔')} Installed`);
+          lines.push(`   ${res.details.strict ? pc.green('✔') : pc.yellow('⚠')} strict ${res.details.strict ? 'enabled' : 'disabled'}`);
+          lines.push(`   ${res.details.noImplicitAny ? pc.green('✔') : pc.yellow('⚠')} noImplicitAny ${res.details.noImplicitAny ? 'enabled' : 'disabled'}`);
+        } else {
+          lines.push(`   ${pc.red('✖')} TypeScript not installed`);
+        }
+        lines.push('');
+      }
+
+      else if (res.id === 'styling') {
+        lines.push(`🎨 ${pc.bold('STYLING')}`);
+        lines.push(`   ${res.summary}`);
+        lines.push('');
+      }
+
+      else if (res.id === 'state-management') {
+        lines.push(`🧠 ${pc.bold('STATE MANAGEMENT')}`);
+        lines.push(`   ${res.summary}`);
+        lines.push('');
+      }
+
+      else if (res.id === 'form-library') {
+        lines.push(`📝 ${pc.bold('FORM LIBRARIES')}`);
+        lines.push(`   ${res.summary}`);
+        lines.push('');
+      }
+
+      else if (res.id === 'validation') {
+        lines.push(`🛡️ ${pc.bold('VALIDATION SCHEMAS')}`);
+        lines.push(`   ${res.summary}`);
+        lines.push('');
+      }
+
+      else if (res.id === 'testing-stack') {
+        lines.push(`🧪 ${pc.bold('TESTING')}`);
+        const unit = res.details.unitTools || [];
+        const e2e = res.details.e2eTools || [];
+        if (unit.length > 0) {
+          for (const u of unit) {
+            lines.push(`   ${pc.green('✔')} ${u}`);
+          }
+        } else {
+          lines.push(`   ${pc.yellow('⚠')} No Unit/Component testing framework configured`);
+        }
+        if (e2e.length > 0) {
+          for (const e of e2e) {
+            lines.push(`   ${pc.green('✔')} ${e}`);
+          }
+        } else {
+          lines.push(`   ${pc.yellow('⚠')} No E2E testing framework configured`);
+        }
+        lines.push('');
+      }
+
+      else if (res.id === 'code-quality') {
+        lines.push(`✨ ${pc.bold('CODE QUALITY')}`);
+        lines.push(`   ${res.details.hasESLint ? pc.green('✔') : pc.yellow('⚠')} ESLint ${res.details.hasESLint ? 'configured' : 'not configured'}`);
+        lines.push(`   ${res.details.hasPrettier ? pc.green('✔') : pc.yellow('⚠')} Prettier ${res.details.hasPrettier ? 'configured' : 'not configured'}`);
+        const hasHooks = res.details.hasHusky || res.details.hasLintStaged || res.details.hasCommitlint;
+        lines.push(`   ${hasHooks ? pc.green('✔') : pc.yellow('⚠')} Git hooks ${hasHooks ? 'configured' : 'not configured'}`);
+        lines.push('');
+      }
+
+      else if (res.id === 'deployment') {
+        lines.push(`🚀 ${pc.bold('DEPLOYMENT')}`);
+        lines.push(`   ${res.summary}`);
+        lines.push('');
+      }
+
+      else if (res.id === 'ci-cd') {
+        lines.push(`⚙  ${pc.bold('CI/CD')}`);
+        if (res.details.hasCi) {
+          for (const p of (res.details.platforms || [])) {
+            lines.push(`   ${pc.green('✔')} ${p} detected`);
+          }
+        } else {
+          lines.push(`   ${pc.yellow('⚠')} No CI/CD workflows detected`);
+        }
+        lines.push('');
+      }
+
+      else if (res.id === 'documentation') {
+        lines.push(`📚 ${pc.bold('DOCUMENTATION')}`);
+        lines.push(`   ${res.details.hasReadme ? pc.green('✔') : pc.red('✖')} README.md ${res.details.hasReadme ? 'present' : 'missing'}`);
+        lines.push(`   ${res.details.hasLicense ? pc.green('✔') : pc.yellow('⚠')} LICENSE ${res.details.hasLicense ? 'present' : 'missing'}`);
+        lines.push(`   ${res.details.hasChangelog ? pc.green('✔') : pc.yellow('⚠')} CHANGELOG.md ${res.details.hasChangelog ? 'present' : 'missing'}`);
+        lines.push(`   ${res.details.hasContributing ? pc.green('✔') : pc.yellow('⚠')} CONTRIBUTING.md ${res.details.hasContributing ? 'present' : 'missing'}`);
+        lines.push('');
+      }
+
+      else if (res.id === 'environment') {
+        lines.push(`🔒 ${pc.bold('ENVIRONMENT')}`);
+        lines.push(`   ${res.details.hasEnvExample ? pc.green('✔') : pc.yellow('⚠')} .env.example ${res.details.hasEnvExample ? 'present' : 'missing'}`);
+        lines.push(`   ${res.details.hasGitignore ? pc.green('✔') : pc.yellow('⚠')} .gitignore ${res.details.hasGitignore ? 'present' : 'missing'}`);
+        lines.push(`   ${res.details.hasEditorconfig ? pc.green('✔') : pc.yellow('⚠')} .editorconfig ${res.details.hasEditorconfig ? 'present' : 'missing'}`);
+        lines.push('');
+      }
+
+      else if (res.id === 'project-structure') {
+        lines.push(`📁 ${pc.bold('PROJECT STRUCTURE')}`);
+        lines.push(`   ${res.details.src ? pc.green('✔') : pc.yellow('⚠')} src ${res.details.src ? 'folder present' : 'folder missing'}`);
+        lines.push(`   ${res.details.components ? pc.green('✔') : pc.yellow('⚠')} components ${res.details.components ? 'folder present' : 'folder missing'}`);
+        lines.push(`   ${res.details.hooks ? pc.green('✔') : pc.yellow('⚠')} hooks ${res.details.hooks ? 'folder present' : 'folder missing'}`);
+        lines.push(`   ${res.details.tests ? pc.green('✔') : pc.yellow('⚠')} tests ${res.details.tests ? 'folder present' : 'folder missing'}`);
+        lines.push('');
+      }
+
+      else if (res.id === 'dependency') {
+        lines.push(`📦 ${pc.bold('DEPENDENCY ANALYSIS')}`);
+        lines.push(`   Total Dependencies: ${res.details.totalDeps}`);
+        lines.push(`   Production: ${res.details.totalProd}`);
+        lines.push(`   Dev: ${res.details.totalDev}`);
+        if (res.details.isDeep) {
+          if (res.details.unusedDeps && res.details.unusedDeps.length > 0) {
+            lines.push(`   Unused Production Dependencies:`);
+            for (const d of res.details.unusedDeps) {
+              lines.push(`   - ${pc.yellow(d)}`);
+            }
+          }
+          if (res.details.duplicateDeps && res.details.duplicateDeps.length > 0) {
+            lines.push(`   Duplicate Dependencies:`);
+            for (const d of res.details.duplicateDeps) {
+              lines.push(`   - ${pc.red(d)}`);
+            }
+          }
+        }
+        lines.push('');
+      }
+
+      else if (res.id === 'health-score') {
+        const breakdown = res.details.scoreBreakdown;
+        lines.push(`📊 ${pc.bold('FRONTEND HEALTH SCORE')}`);
+        lines.push('');
+        for (const cat of breakdown.categories) {
+          const paddedName = cat.name.padEnd(16);
+          const bar = '■'.repeat(Math.round((cat.score / cat.max) * 10)) + '░'.repeat(10 - Math.round((cat.score / cat.max) * 10));
+          const scoreStr = `${cat.score}/${cat.max}`.padStart(5);
+          lines.push(`   ${paddedName} ${pc.cyan(bar)} ${pc.bold(scoreStr)}`);
+        }
+        lines.push('');
+        lines.push(`   Overall Score: ${pc.bold(pc.green(`${breakdown.overall} / 100`))}`);
+        lines.push('');
+      }
+
+      else if (res.id === 'recommendations') {
+        const recommendations = res.details.recommendations;
+        if (recommendations && recommendations.length > 0) {
+          lines.push(`💡 ${pc.bold('ACTIONABLE RECOMMENDATIONS')}`);
+          for (const rec of recommendations) {
+            const icon = rec.severity === 'risk' ? pc.red('✖') : rec.severity === 'warn' ? pc.yellow('⚠') : pc.cyan('ℹ');
+            lines.push(`   ${icon} ${pc.bold(rec.title)}`);
+            lines.push(`     ${pc.dim('Why:')} ${rec.why}`);
+          }
+          lines.push('');
+        }
+      }
     }
 
     lines.push(pc.dim('────────────────────────────────────────────'));

@@ -17,6 +17,26 @@ import { EnvMismatchCheck } from '../checks/env-mismatch.check';
 import { ReadmeStalenessCheck } from '../checks/readme-staleness.check';
 import { LargestComponentsCheck } from '../checks/largest-components.check';
 
+// Frontend Health Analyzer checks
+import { ProjectInfoCheck } from '../checks/project-info.check';
+import { FrameworkCheck } from '../checks/framework.check';
+import { BuildToolCheck } from '../checks/build-tool.check';
+import { TypeScriptCheck } from '../checks/typescript.check';
+import { StylingCheck } from '../checks/styling.check';
+import { StateManagementCheck } from '../checks/state-management.check';
+import { FormLibraryCheck } from '../checks/form-library.check';
+import { ValidationCheck } from '../checks/validation.check';
+import { TestingStackCheck } from '../checks/testing-stack.check';
+import { CodeQualityCheck } from '../checks/code-quality.check';
+import { DeploymentCheck } from '../checks/deployment.check';
+import { CiCdCheck } from '../checks/ci-cd.check';
+import { DocumentationCheck } from '../checks/documentation.check';
+import { EnvironmentCheck } from '../checks/environment.check';
+import { ProjectStructureCheck } from '../checks/project-structure.check';
+import { DependencyCheck } from '../checks/dependency.check';
+import { HealthScoreCheck } from '../checks/health-score.check';
+import { RecommendationsCheck } from '../checks/recommendations.check';
+
 // Deep checks
 import { CouplingHotspotsCheck } from '../checks/deep/coupling-hotspots.check';
 import { BoundaryViolationsCheck } from '../checks/deep/boundary-violations.check';
@@ -39,6 +59,26 @@ export class CodebaseEngine {
     new EnvMismatchCheck(),
     new ReadmeStalenessCheck(),
     new LargestComponentsCheck(),
+
+    // Frontend Health Analyzer checks
+    new ProjectInfoCheck(),
+    new FrameworkCheck(),
+    new BuildToolCheck(),
+    new TypeScriptCheck(),
+    new StylingCheck(),
+    new StateManagementCheck(),
+    new FormLibraryCheck(),
+    new ValidationCheck(),
+    new TestingStackCheck(),
+    new CodeQualityCheck(),
+    new DeploymentCheck(),
+    new CiCdCheck(),
+    new DocumentationCheck(),
+    new EnvironmentCheck(),
+    new ProjectStructureCheck(),
+    new DependencyCheck(),
+    new HealthScoreCheck(),
+    new RecommendationsCheck(),
 
     // Deep set
     new CouplingHotspotsCheck(),

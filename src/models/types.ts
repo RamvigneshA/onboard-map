@@ -48,6 +48,7 @@ export interface Context {
   readmeContent: string | null;
   envExampleKeys: string[];
   projectMeta: ProjectMeta;
+  isDeep?: boolean;
 }
 
 export type Severity = 'info' | 'warn' | 'risk';
