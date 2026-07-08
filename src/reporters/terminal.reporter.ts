@@ -19,7 +19,7 @@ import { DeepImportChainResult } from '../checks/deep/deep-import-chains.check';
 export class TerminalReporter implements Reporter {
   render(
     results: CheckResult[],
-    meta: { filesScanned: number; edgeCount: number; durationMs: number; projectName: string; isRealGit: boolean; projectMeta?: any }
+    meta: { filesScanned: number; edgeCount: number; durationMs: number; projectName: string; isRealGit: boolean; projectMeta?: any; isDeep?: boolean }
   ): string {
     const lines: string[] = [];
 
@@ -179,7 +179,7 @@ export class TerminalReporter implements Reporter {
       else if (res.id === 'bus-factor') {
         const files = res.details.files as BusFactorResult[];
         if (files && files.length > 0) {
-          lines.push(`🚌 ${pc.bold(pc.red('BUS FACTOR RISK'))}`);
+          lines.push(`🚌 ${pc.bold(pc.red('OWNERSHIP RISK'))}`);
           for (const f of files) {
             lines.push(`   ${pc.red(f.file.padEnd(28))} ${f.percentage}% of commits by ${pc.bold(f.topAuthor)} (12mo)`);
           }
@@ -235,7 +235,9 @@ export class TerminalReporter implements Reporter {
     lines.push(pc.dim('────────────────────────────────────────────'));
     const durationS = (meta.durationMs / 1000).toFixed(1);
     lines.push(`  ${meta.filesScanned} files · ${meta.edgeCount} imports · done in ${durationS}s`);
-    lines.push(`  Run with --deep for architecture-level findings`);
+    if (!meta.isDeep) {
+      lines.push(`  Run with --deep for architecture-level findings`);
+    }
     lines.push(pc.dim('────────────────────────────────────────────'));
     lines.push('');
 

@@ -34,11 +34,11 @@ export class CouplingHotspotsCheck implements Check {
           score: fanIn * fanOut,
         };
       })
-      .filter(h => h.score > 0)
+      .filter(h => h.fanIn >= 3 && h.fanOut >= 8)
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
 
-    const count = hotspots.filter(h => h.score >= 10).length;
+    const count = hotspots.length;
     const severity = count > 0 ? 'risk' : 'info';
     let summary = 'No high-coupling hotspots detected';
     if (count > 0) {

@@ -13,13 +13,14 @@ export interface ImportEdge {
   from: string;
   to: string;
   isTypeOnly: boolean;   // distinguish type-only imports — they don't count as real circular risk
+  isReExport?: boolean;  // distinguish re-exports from barrels — they are pass-throughs
 }
 
 export interface ImportGraph {
   files: FileNode[];
   edges: ImportEdge[];
-  fanIn(file: string): number;
-  fanOut(file: string): number;
+  fanIn(file: string, options?: { includeReExports?: boolean }): number;
+  fanOut(file: string, options?: { includeReExports?: boolean }): number;
 }
 
 export interface GitCommit {

@@ -18,7 +18,7 @@ export class DeadEndsCheck implements Check {
 
     const deadEnds = graph.files.filter(f => {
       // Must have 0 inbound imports (fan-in is 0)
-      const hasNoInbound = graph.fanIn(f.path) === 0;
+      const hasNoInbound = graph.fanIn(f.path, { includeReExports: false }) === 0;
       
       // Must not be an entry point candidate
       const isEntry = entryCandidates.includes(f.path);

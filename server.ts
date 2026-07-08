@@ -56,6 +56,7 @@ app.get('/api/analyze', async (req, res) => {
       durationMs,
       isRealGit,
       projectMeta: context.projectMeta,
+      isDeep: runDeep,
     };
 
     // Render ANSI CLI output so the frontend can display a terminal preview
@@ -125,6 +126,7 @@ app.post('/api/upload-zip', async (req, res) => {
       durationMs,
       isRealGit,
       projectMeta: context.projectMeta,
+      isDeep: true,
     };
 
     const terminalReporter = new TerminalReporter();

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Project, SourceFile } from 'ts-morph';
+import { Project, SourceFile, Node } from 'ts-morph';
 import * as path from 'path';
 import * as fs from 'fs';
 import { FileNode, ImportEdge, ImportGraph } from '../models/types';
@@ -46,12 +46,24 @@ export class AppImportGraph implements ImportGraph {
     }
   }
 
-  fanIn(file: string): number {
-    return this.fanInMap.get(file) || 0;
+  fanIn(file: string, options?: { includeReExports?: boolean }): number {
+    const includeReExports = options?.includeReExports !== false;
+    const edgesTo = this.getEdgesTo(file);
+    if (includeReExports) {
+      return edgesTo.length;
+    } else {
+      return edgesTo.filter(e => !e.isReExport).length;
+    }
   }
 
-  fanOut(file: string): number {
-    return this.fanOutMap.get(file) || 0;
+  fanOut(file: string, options?: { includeReExports?: boolean }): number {
+    const includeReExports = options?.includeReExports !== false;
+    const edgesFrom = this.getEdgesFrom(file);
+    if (includeReExports) {
+      return edgesFrom.length;
+    } else {
+      return edgesFrom.filter(e => !e.isReExport).length;
+    }
   }
 
   getEdgesFrom(file: string): ImportEdge[] {
@@ -175,6 +187,11 @@ export class AppImportGraph implements ImportGraph {
 }
 
 export class ImportGraphService {
+  private static isExecutableModule(filePath: string): boolean {
+    const ext = path.extname(filePath).toLowerCase();
+    return ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'].includes(ext);
+  }
+
   private static resolveFileWithExtensions(candidatePath: string): string | null {
     if (fs.existsSync(candidatePath) && fs.statSync(candidatePath).isFile()) {
       return candidatePath;
@@ -306,6 +323,9 @@ export class ImportGraphService {
     for (const sf of filteredSourceFiles) {
       const absolutePath = sf.getFilePath();
       const relativePath = absoluteToRelative(absolutePath);
+      if (!this.isExecutableModule(relativePath)) {
+        continue;
+      }
       const text = sf.getFullText();
       const loc = text.split('\n').length;
 
@@ -335,49 +355,88 @@ export class ImportGraphService {
       const imports = sf.getImportDeclarations();
       for (const imp of imports) {
         const isTypeOnly = imp.isTypeOnly();
-        let importedRelPath: string | null = null;
-        const importedSourceFile = imp.getModuleSpecifierSourceFile();
+        const importedRelPaths = new Set<string>();
 
+        // Trace actual definitions to follow re-exports
+        try {
+          const namedImports = imp.getNamedImports();
+          for (const named of namedImports) {
+            const nameNode = named.getNameNode();
+            if (Node.isIdentifier(nameNode)) {
+              const defs = nameNode.getDefinitions();
+              for (const def of defs) {
+                const defSf = def.getSourceFile();
+                if (defSf) {
+                  const defAbsPath = defSf.getFilePath();
+                  if (!defAbsPath.includes('node_modules')) {
+                    const rel = absoluteToRelative(defAbsPath);
+                    if (rel && rel !== relativePath && this.isExecutableModule(rel)) {
+                      importedRelPaths.add(rel);
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          const defaultImport = imp.getDefaultImport();
+          if (defaultImport && Node.isIdentifier(defaultImport)) {
+            const defs = defaultImport.getDefinitions();
+            for (const def of defs) {
+              const defSf = def.getSourceFile();
+              if (defSf) {
+                const defAbsPath = defSf.getFilePath();
+                if (!defAbsPath.includes('node_modules')) {
+                  const rel = absoluteToRelative(defAbsPath);
+                  if (rel && rel !== relativePath && this.isExecutableModule(rel)) {
+                    importedRelPaths.add(rel);
+                  }
+                }
+              }
+            }
+          }
+        } catch (e) {
+          // ignore compiler/language service errors
+        }
+
+        // Always resolve direct module specifier path too
+        let directRelPath: string | null = null;
+        const importedSourceFile = imp.getModuleSpecifierSourceFile();
         if (importedSourceFile) {
           const importedAbsPath = importedSourceFile.getFilePath();
           if (!importedAbsPath.includes('node_modules')) {
-            importedRelPath = absoluteToRelative(importedAbsPath);
+            directRelPath = absoluteToRelative(importedAbsPath);
           }
         }
 
-        // Fallback: manual module resolution
-        if (!importedRelPath) {
+        if (!directRelPath) {
           try {
             const specifier = imp.getModuleSpecifierValue();
             const sourceFileAbsPath = sf.getFilePath();
             const sourceFileDir = path.dirname(sourceFileAbsPath);
 
-            // 1. Resolve relative imports (e.g. "./foo" or "../bar")
             if (specifier.startsWith('.')) {
               const candidateAbs = path.resolve(sourceFileDir, specifier);
               const resolvedAbs = this.resolveFileWithExtensions(candidateAbs);
               if (resolvedAbs) {
-                importedRelPath = absoluteToRelative(resolvedAbs);
+                directRelPath = absoluteToRelative(resolvedAbs);
               }
             } else {
-              // 2. Resolve via TSConfig/JSConfig aliases
               const resolvedAbsAlias = this.resolveAlias(specifier, meta.aliases, rootDir);
               if (resolvedAbsAlias) {
-                importedRelPath = absoluteToRelative(resolvedAbsAlias);
+                directRelPath = absoluteToRelative(resolvedAbsAlias);
               } else {
-                // 3. Resolve via monorepo workspaces
                 const resolvedAbsPkg = this.resolveWorkspacePackage(specifier, meta.workspacePackages, rootDir);
                 if (resolvedAbsPkg) {
-                  importedRelPath = absoluteToRelative(resolvedAbsPkg);
+                  directRelPath = absoluteToRelative(resolvedAbsPkg);
                 } else {
-                  // 4. Try absolute baseUrl fallback (e.g. "components/Button" where baseUrl is rootDir or rootDir/src)
                   const candidateBaseUrl = path.resolve(rootDir, specifier);
                   let resolvedAbsBase = this.resolveFileWithExtensions(candidateBaseUrl);
                   if (!resolvedAbsBase) {
                     resolvedAbsBase = this.resolveFileWithExtensions(path.resolve(rootDir, 'src', specifier));
                   }
                   if (resolvedAbsBase) {
-                    importedRelPath = absoluteToRelative(resolvedAbsBase);
+                    directRelPath = absoluteToRelative(resolvedAbsBase);
                   }
                 }
               }
@@ -387,10 +446,14 @@ export class ImportGraphService {
           }
         }
 
-        if (importedRelPath && importedRelPath !== relativePath) {
+        if (directRelPath && directRelPath !== relativePath && this.isExecutableModule(directRelPath)) {
+          importedRelPaths.add(directRelPath);
+        }
+
+        for (const relPath of importedRelPaths) {
           edges.push({
             from: relativePath,
-            to: importedRelPath,
+            to: relPath,
             isTypeOnly,
           });
         }
@@ -445,11 +508,12 @@ export class ImportGraphService {
               }
             }
 
-            if (exportedRelPath && exportedRelPath !== relativePath) {
+            if (exportedRelPath && exportedRelPath !== relativePath && this.isExecutableModule(exportedRelPath)) {
               edges.push({
                 from: relativePath,
                 to: exportedRelPath,
                 isTypeOnly,
+                isReExport: true,
               });
             }
           }

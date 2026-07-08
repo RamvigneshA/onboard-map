@@ -51,13 +51,13 @@ export class HighRiskCheck implements Check {
     }
 
     // Sort by risk score descending
-    // Filter to only include files with a non-zero risk score (or at least some fan-in / churn)
+    // Filter to only include files with fanIn >= 3, positive churn, and no tests
     const sortedRisks = results
-      .filter(r => r.riskScore > 0 || r.fanIn > 5)
+      .filter(r => r.fanIn >= 3 && r.changes90d > 0 && !r.hasTest)
       .sort((a, b) => b.riskScore - a.riskScore)
       .slice(0, 5); // top 5 high risk files
 
-    const riskCount = sortedRisks.filter(r => r.riskScore > 10).length;
+    const riskCount = sortedRisks.length;
     const severity = riskCount > 0 ? 'risk' : 'info';
     
     let summary = 'No high-risk files identified';

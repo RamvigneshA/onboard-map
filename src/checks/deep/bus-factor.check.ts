@@ -21,6 +21,19 @@ export class BusFactorCheck implements Check {
   deep = true;
 
   async run(context: Context): Promise<CheckResult> {
+    const uniqueAuthors = new Set(context.gitLog.map(c => c.author));
+    if (uniqueAuthors.size < 2) {
+      return {
+        id: this.id,
+        title: 'Ownership Risk',
+        severity: 'info',
+        summary: 'Skipped: repository has only one active author',
+        details: {
+          files: [],
+        },
+      };
+    }
+
     const graph = context.importGraph as AppImportGraph;
     const now = new Date();
     const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
@@ -74,12 +87,12 @@ export class BusFactorCheck implements Check {
     const severity = count > 0 ? 'risk' : 'info';
     let summary = 'Codebase knowledge is well-distributed';
     if (count > 0) {
-      summary = `${count} high-impact file${count === 1 ? '' : 's'} with high bus-factor risk (knowledge silos)`;
+      summary = `${count} high-impact file${count === 1 ? '' : 's'} with high ownership risk (knowledge silos)`;
     }
 
     return {
       id: this.id,
-      title: 'Bus Factor Risk',
+      title: 'Ownership Risk',
       severity,
       summary,
       details: {

@@ -54,6 +54,7 @@ program
         projectName,
         isRealGit,
         projectMeta: context.projectMeta,
+        isDeep: !!options.deep,
       };
 
       // 3. Format and Output Report
