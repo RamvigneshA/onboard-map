@@ -14,21 +14,28 @@ export class DeadEndsCheck implements Check {
   async run(context: Context): Promise<CheckResult> {
     const graph = context.importGraph as AppImportGraph;
 
-    const entryCandidates = [
-      'src/main.tsx',
-      'src/main.ts',
-      'src/index.tsx',
-      'src/index.ts',
-      'index.html',
-      'src/App.tsx',
-    ];
+    const entryCandidates = context.projectMeta.entryPoints;
 
     const deadEnds = graph.files.filter(f => {
       // Must have 0 inbound imports (fan-in is 0)
       const hasNoInbound = graph.fanIn(f.path) === 0;
+      
       // Must not be an entry point candidate
       const isEntry = entryCandidates.includes(f.path);
-      return hasNoInbound && !isEntry;
+      if (isEntry) return false;
+
+      // Must not be a test file or inside test/spec directories
+      const lowercasePath = f.path.toLowerCase();
+      const isTestFile = lowercasePath.includes('.test.') || 
+                         lowercasePath.includes('.spec.') || 
+                         lowercasePath.split('/').some(part => ['test', 'tests', 'spec', 'specs', '__tests__'].includes(part));
+      if (isTestFile) return false;
+
+      // Must not be a config file (e.g. vite.config.ts, tailwind.config.js, etc.)
+      const isConfig = lowercasePath.includes('.config.');
+      if (isConfig) return false;
+
+      return hasNoInbound;
     });
 
     const count = deadEnds.length;

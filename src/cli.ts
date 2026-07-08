@@ -53,6 +53,7 @@ program
         durationMs,
         projectName,
         isRealGit,
+        projectMeta: context.projectMeta,
       };
 
       // 3. Format and Output Report

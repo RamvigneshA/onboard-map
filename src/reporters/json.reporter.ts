@@ -8,7 +8,7 @@ import { CheckResult, Reporter } from '../models/types';
 export class JsonReporter implements Reporter {
   render(
     results: CheckResult[],
-    meta: { filesScanned: number; edgeCount: number; durationMs: number; projectName: string }
+    meta: { filesScanned: number; edgeCount: number; durationMs: number; projectName: string; projectMeta?: any }
   ): string {
     const output = {
       meta: {
@@ -16,6 +16,7 @@ export class JsonReporter implements Reporter {
         filesScanned: meta.filesScanned,
         importEdges: meta.edgeCount,
         durationMs: meta.durationMs,
+        projectMeta: meta.projectMeta,
       },
       results: results.map(res => ({
         id: res.id,

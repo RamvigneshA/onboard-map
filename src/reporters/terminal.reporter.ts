@@ -19,7 +19,7 @@ import { DeepImportChainResult } from '../checks/deep/deep-import-chains.check';
 export class TerminalReporter implements Reporter {
   render(
     results: CheckResult[],
-    meta: { filesScanned: number; edgeCount: number; durationMs: number; projectName: string; isRealGit: boolean }
+    meta: { filesScanned: number; edgeCount: number; durationMs: number; projectName: string; isRealGit: boolean; projectMeta?: any }
   ): string {
     const lines: string[] = [];
 
@@ -33,6 +33,21 @@ export class TerminalReporter implements Reporter {
     } else {
       lines.push(`  ${pc.yellow('⚠')} Running with sandbox simulated history (no local git repo found)`);
     }
+
+    if (meta.projectMeta) {
+      const pm = meta.projectMeta;
+      const frameworkLabel = pm.framework !== 'unknown' ? pm.framework.toUpperCase() : 'General JS/TS';
+      const pmLabel = pm.packageManager !== 'unknown' ? pm.packageManager.toUpperCase() : 'npm';
+      const workspaceLabel = pm.workspaceType !== 'none' ? `Monorepo (${pm.workspaceType.toUpperCase()})` : 'Single package';
+      const typeLabel = pm.projectType !== 'unknown' ? pm.projectType.toUpperCase() : 'APPLICATION';
+
+      lines.push(`  ${pc.green('✓')} Ecosystem: ${pc.bold(frameworkLabel)} | Package Manager: ${pc.bold(pmLabel)}`);
+      lines.push(`  ${pc.green('✓')} Structure: ${pc.bold(workspaceLabel)} | Type: ${pc.bold(typeLabel)}`);
+      if (pm.workspacePackages.length > 0) {
+        lines.push(`  ${pc.green('✓')} Discovered ${pc.bold(pm.workspacePackages.length)} workspace package(s)`);
+      }
+    }
+
     lines.push('');
     lines.push(pc.dim('────────────────────────────────────────────'));
     lines.push('');

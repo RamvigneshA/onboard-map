@@ -7,6 +7,8 @@ import { Project, SourceFile } from 'ts-morph';
 import * as path from 'path';
 import * as fs from 'fs';
 import { FileNode, ImportEdge, ImportGraph } from '../models/types';
+import { FsService } from './fs.service';
+import { ProjectDiscoveryService } from './project-discovery.service';
 
 export class AppImportGraph implements ImportGraph {
   files: FileNode[];
@@ -173,9 +175,92 @@ export class AppImportGraph implements ImportGraph {
 }
 
 export class ImportGraphService {
+  private static resolveFileWithExtensions(candidatePath: string): string | null {
+    if (fs.existsSync(candidatePath) && fs.statSync(candidatePath).isFile()) {
+      return candidatePath;
+    }
+    const extensions = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'];
+    for (const ext of extensions) {
+      const p = candidatePath + ext;
+      if (fs.existsSync(p) && fs.statSync(p).isFile()) {
+        return p;
+      }
+    }
+    // If it is a directory, check for index files
+    if (fs.existsSync(candidatePath) && fs.statSync(candidatePath).isDirectory()) {
+      for (const ext of extensions) {
+        const p = path.join(candidatePath, 'index' + ext);
+        if (fs.existsSync(p) && fs.statSync(p).isFile()) {
+          return p;
+        }
+      }
+    }
+    return null;
+  }
+
+  private static resolveAlias(specifier: string, aliases: Record<string, string[]>, rootDir: string): string | null {
+    for (const pattern of Object.keys(aliases)) {
+      if (pattern.endsWith('/*')) {
+        const prefix = pattern.slice(0, -2);
+        if (specifier.startsWith(prefix)) {
+          const subPath = specifier.slice(prefix.length);
+          const targets = aliases[pattern];
+          for (const target of targets) {
+            if (target.endsWith('/*')) {
+              const targetPrefix = target.slice(0, -2);
+              const resolvedRel = path.join(targetPrefix, subPath);
+              const resolvedAbs = path.resolve(rootDir, resolvedRel);
+              const found = this.resolveFileWithExtensions(resolvedAbs);
+              if (found) return found;
+            }
+          }
+        }
+      } else if (specifier === pattern) {
+        const targets = aliases[pattern];
+        for (const target of targets) {
+          const resolvedAbs = path.resolve(rootDir, target);
+          const found = this.resolveFileWithExtensions(resolvedAbs);
+          if (found) return found;
+        }
+      }
+    }
+    return null;
+  }
+
+  private static resolveWorkspacePackage(specifier: string, workspacePackages: { name: string; path: string }[], rootDir: string): string | null {
+    const matchedPkg = workspacePackages.find(p => specifier === p.name || specifier.startsWith(p.name + '/'));
+    if (matchedPkg) {
+      const pkgAbsDir = path.resolve(rootDir, matchedPkg.path);
+      if (specifier === matchedPkg.name) {
+        try {
+          const pkgJsonPath = path.join(pkgAbsDir, 'package.json');
+          if (fs.existsSync(pkgJsonPath)) {
+            const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
+            const entry = pkgJson.module || pkgJson.main;
+            if (entry) {
+              const found = this.resolveFileWithExtensions(path.resolve(pkgAbsDir, entry));
+              if (found) return found;
+            }
+          }
+        } catch (e) {
+          // ignore
+        }
+        return this.resolveFileWithExtensions(path.join(pkgAbsDir, 'src/index')) || 
+               this.resolveFileWithExtensions(path.join(pkgAbsDir, 'index'));
+      } else {
+        const subPath = specifier.slice(matchedPkg.name.length + 1);
+        return this.resolveFileWithExtensions(path.resolve(pkgAbsDir, subPath));
+      }
+    }
+    return null;
+  }
+
   static buildGraph(rootDir: string, targetDir?: string): AppImportGraph {
     const searchPath = targetDir || rootDir;
     
+    // Discover project metadata to helper resolver
+    const meta = ProjectDiscoveryService.discover(rootDir);
+
     // Create ts-morph Project
     let project: Project;
     const tsconfigPath = path.join(rootDir, 'tsconfig.json');
@@ -189,11 +274,14 @@ export class ImportGraphService {
       project = new Project();
     }
 
-    // Ensure targetDir files are loaded if not already loaded
-    if (targetDir) {
-      project.addSourceFilesAtPaths(path.join(targetDir, '**/*.{ts,tsx}'));
-    } else if (!fs.existsSync(tsconfigPath)) {
-      project.addSourceFilesAtPaths(path.join(rootDir, 'src/**/*.{ts,tsx}'));
+    // Explicitly find and add all JS/TS files in search path to ensure ts-morph has them loaded
+    const allFiles = FsService.walkFiles(searchPath);
+    for (const file of allFiles) {
+      try {
+        project.addSourceFileAtPath(file);
+      } catch (e) {
+        // Skip
+      }
     }
 
     const sourceFiles = project.getSourceFiles();
@@ -206,7 +294,7 @@ export class ImportGraphService {
     const filteredSourceFiles = sourceFiles.filter(sf => {
       const filePath = sf.getFilePath();
       // Exclude node_modules and output directories
-      if (filePath.includes('node_modules') || filePath.includes('/dist/') || filePath.includes('/build/')) {
+      if (filePath.includes('node_modules') || filePath.includes('/dist/') || filePath.includes('/build/') || filePath.includes('/coverage/') || filePath.includes('/.next/')) {
         return false;
       }
       if (targetDirNormalized) {
@@ -247,22 +335,127 @@ export class ImportGraphService {
       const imports = sf.getImportDeclarations();
       for (const imp of imports) {
         const isTypeOnly = imp.isTypeOnly();
+        let importedRelPath: string | null = null;
         const importedSourceFile = imp.getModuleSpecifierSourceFile();
 
         if (importedSourceFile) {
           const importedAbsPath = importedSourceFile.getFilePath();
-          // Skip external library source files
-          if (importedAbsPath.includes('node_modules')) {
-            continue;
+          if (!importedAbsPath.includes('node_modules')) {
+            importedRelPath = absoluteToRelative(importedAbsPath);
           }
-          const importedRelPath = absoluteToRelative(importedAbsPath);
-          
+        }
+
+        // Fallback: manual module resolution
+        if (!importedRelPath) {
+          try {
+            const specifier = imp.getModuleSpecifierValue();
+            const sourceFileAbsPath = sf.getFilePath();
+            const sourceFileDir = path.dirname(sourceFileAbsPath);
+
+            // 1. Resolve relative imports (e.g. "./foo" or "../bar")
+            if (specifier.startsWith('.')) {
+              const candidateAbs = path.resolve(sourceFileDir, specifier);
+              const resolvedAbs = this.resolveFileWithExtensions(candidateAbs);
+              if (resolvedAbs) {
+                importedRelPath = absoluteToRelative(resolvedAbs);
+              }
+            } else {
+              // 2. Resolve via TSConfig/JSConfig aliases
+              const resolvedAbsAlias = this.resolveAlias(specifier, meta.aliases, rootDir);
+              if (resolvedAbsAlias) {
+                importedRelPath = absoluteToRelative(resolvedAbsAlias);
+              } else {
+                // 3. Resolve via monorepo workspaces
+                const resolvedAbsPkg = this.resolveWorkspacePackage(specifier, meta.workspacePackages, rootDir);
+                if (resolvedAbsPkg) {
+                  importedRelPath = absoluteToRelative(resolvedAbsPkg);
+                } else {
+                  // 4. Try absolute baseUrl fallback (e.g. "components/Button" where baseUrl is rootDir or rootDir/src)
+                  const candidateBaseUrl = path.resolve(rootDir, specifier);
+                  let resolvedAbsBase = this.resolveFileWithExtensions(candidateBaseUrl);
+                  if (!resolvedAbsBase) {
+                    resolvedAbsBase = this.resolveFileWithExtensions(path.resolve(rootDir, 'src', specifier));
+                  }
+                  if (resolvedAbsBase) {
+                    importedRelPath = absoluteToRelative(resolvedAbsBase);
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            // ignore
+          }
+        }
+
+        if (importedRelPath && importedRelPath !== relativePath) {
           edges.push({
             from: relativePath,
             to: importedRelPath,
             isTypeOnly,
           });
         }
+      }
+
+      // Parse export declarations that export from another file
+      try {
+        const exports = sf.getExportDeclarations();
+        for (const exp of exports) {
+          const specifier = exp.getModuleSpecifierValue();
+          if (specifier) {
+            const isTypeOnly = exp.isTypeOnly();
+            let exportedRelPath: string | null = null;
+            const exportedSourceFile = exp.getModuleSpecifierSourceFile();
+
+            if (exportedSourceFile) {
+              const exportedAbsPath = exportedSourceFile.getFilePath();
+              if (!exportedAbsPath.includes('node_modules')) {
+                exportedRelPath = absoluteToRelative(exportedAbsPath);
+              }
+            }
+
+            if (!exportedRelPath) {
+              const sourceFileAbsPath = sf.getFilePath();
+              const sourceFileDir = path.dirname(sourceFileAbsPath);
+
+              if (specifier.startsWith('.')) {
+                const candidateAbs = path.resolve(sourceFileDir, specifier);
+                const resolvedAbs = this.resolveFileWithExtensions(candidateAbs);
+                if (resolvedAbs) {
+                  exportedRelPath = absoluteToRelative(resolvedAbs);
+                }
+              } else {
+                const resolvedAbsAlias = this.resolveAlias(specifier, meta.aliases, rootDir);
+                if (resolvedAbsAlias) {
+                  exportedRelPath = absoluteToRelative(resolvedAbsAlias);
+                } else {
+                  const resolvedAbsPkg = this.resolveWorkspacePackage(specifier, meta.workspacePackages, rootDir);
+                  if (resolvedAbsPkg) {
+                    exportedRelPath = absoluteToRelative(resolvedAbsPkg);
+                  } else {
+                    const candidateBaseUrl = path.resolve(rootDir, specifier);
+                    let resolvedAbsBase = this.resolveFileWithExtensions(candidateBaseUrl);
+                    if (!resolvedAbsBase) {
+                      resolvedAbsBase = this.resolveFileWithExtensions(path.resolve(rootDir, 'src', specifier));
+                    }
+                    if (resolvedAbsBase) {
+                      exportedRelPath = absoluteToRelative(resolvedAbsBase);
+                    }
+                  }
+                }
+              }
+            }
+
+            if (exportedRelPath && exportedRelPath !== relativePath) {
+              edges.push({
+                from: relativePath,
+                to: exportedRelPath,
+                isTypeOnly,
+              });
+            }
+          }
+        }
+      } catch (e) {
+        // ignore
       }
     }
 

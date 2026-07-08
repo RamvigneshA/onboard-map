@@ -10,7 +10,7 @@ export class FsService {
   /**
    * Recursively walks directory to find TS/JS/JSX/TSX files, skipping ignored folders.
    */
-  static walkFiles(dir: string, ignorePatterns: string[] = ['node_modules', 'dist', 'build', '.git', '.aistudio']): string[] {
+  static walkFiles(dir: string, ignorePatterns: string[] = ['node_modules', 'dist', 'build', 'coverage', '.next', '.turbo', '.cache', 'out', '.git', '.aistudio']): string[] {
     const results: string[] = [];
 
     const walk = (currentDir: string) => {
@@ -40,7 +40,7 @@ export class FsService {
           walk(fullPath);
         } else {
           const ext = path.extname(file);
-          if (['.ts', '.tsx', '.js', '.jsx'].includes(ext)) {
+          if (['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'].includes(ext)) {
             results.push(fullPath);
           }
         }

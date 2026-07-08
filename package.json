@@ -16,7 +16,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "test": "tsx test/services/import-graph.test.ts && tsx test/checks/circular-deps.test.ts",
+    "test": "tsx test/services/import-graph.test.ts && tsx test/services/project-discovery.test.ts && tsx test/checks/circular-deps.test.ts",
     "start": "node server.ts"
   },
   "dependencies": {

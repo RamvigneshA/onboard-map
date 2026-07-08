@@ -60,6 +60,15 @@ interface AnalysisMeta {
   edgeCount: number;
   durationMs: number;
   isRealGit: boolean;
+  projectMeta?: {
+    framework: string;
+    packageManager: string;
+    workspaceType: string;
+    projectType: string;
+    workspacePackages: { name: string; path: string }[];
+    entryPoints: string[];
+    aliases: Record<string, string[]>;
+  };
 }
 
 interface AnalysisData {
@@ -440,12 +449,33 @@ export default function App() {
         {/* Project Meta Rail */}
         {data && (
           <div id="project-meta-rail" className="mb-6 p-4 rounded-xl bg-zinc-900/50 border border-zinc-900 flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <FolderIcon className="h-5 w-5 text-cyan-400" />
-              <div>
-                <span className="text-xs text-zinc-500">Inspecting Codebase</span>
-                <h2 className="text-sm font-bold text-white font-mono">{data.meta.projectName}</h2>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex items-center gap-3">
+                <FolderIcon className="h-5 w-5 text-cyan-400" />
+                <div>
+                  <span className="text-xs text-zinc-500">Inspecting Codebase</span>
+                  <h2 className="text-sm font-bold text-white font-mono">{data.meta.projectName}</h2>
+                </div>
               </div>
+              
+              {data.meta.projectMeta && (
+                <div className="flex flex-wrap gap-2 sm:ml-4">
+                  <span className="text-[10px] font-bold px-2.5 py-1 rounded bg-zinc-800 text-cyan-400 border border-zinc-700/50 font-mono uppercase tracking-wide">
+                    {data.meta.projectMeta.framework}
+                  </span>
+                  <span className="text-[10px] font-bold px-2.5 py-1 rounded bg-zinc-800 text-indigo-400 border border-zinc-700/50 font-mono uppercase tracking-wide">
+                    {data.meta.projectMeta.packageManager}
+                  </span>
+                  {data.meta.projectMeta.workspaceType !== 'none' && (
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded bg-purple-950/40 text-purple-400 border border-purple-900/40 font-mono uppercase tracking-wide">
+                      MONOREPO ({data.meta.projectMeta.workspaceType})
+                    </span>
+                  )}
+                  <span className="text-[10px] font-bold px-2.5 py-1 rounded bg-zinc-800 text-emerald-400 border border-zinc-700/50 font-mono uppercase tracking-wide">
+                    {data.meta.projectMeta.projectType}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-6">

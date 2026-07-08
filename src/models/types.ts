@@ -29,6 +29,16 @@ export interface GitCommit {
   message: string;
 }
 
+export interface ProjectMeta {
+  framework: 'next' | 'react-vite' | 'react-cra' | 'angular' | 'express' | 'node' | 'ts-lib' | 'js-lib' | 'unknown';
+  packageManager: 'npm' | 'yarn' | 'pnpm' | 'unknown';
+  workspaceType: 'turborepo' | 'nx' | 'pnpm' | 'npm' | 'yarn' | 'none';
+  projectType: 'application' | 'library' | 'cli' | 'monorepo' | 'full-stack' | 'unknown';
+  workspacePackages: { name: string; path: string }[];
+  entryPoints: string[];     // list of detected entry point files, relative to rootDir
+  aliases: Record<string, string[]>; // alias mappings from tsconfig/jsconfig paths
+}
+
 export interface Context {
   rootDir: string;
   importGraph: ImportGraph;
@@ -36,6 +46,7 @@ export interface Context {
   packageJson: Record<string, unknown> | null;
   readmeContent: string | null;
   envExampleKeys: string[];
+  projectMeta: ProjectMeta;
 }
 
 export type Severity = 'info' | 'warn' | 'risk';

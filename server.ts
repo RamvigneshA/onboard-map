@@ -55,6 +55,7 @@ app.get('/api/analyze', async (req, res) => {
       edgeCount: context.importGraph.edges.length,
       durationMs,
       isRealGit,
+      projectMeta: context.projectMeta,
     };
 
     // Render ANSI CLI output so the frontend can display a terminal preview
@@ -123,6 +124,7 @@ app.post('/api/upload-zip', async (req, res) => {
       edgeCount: context.importGraph.edges.length,
       durationMs,
       isRealGit,
+      projectMeta: context.projectMeta,
     };
 
     const terminalReporter = new TerminalReporter();

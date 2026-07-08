@@ -8,11 +8,15 @@ import { Context } from '../models/types';
 import { ImportGraphService } from '../services/import-graph.service';
 import { GitHistoryService } from '../services/git-history.service';
 import { FsService } from '../services/fs.service';
+import { ProjectDiscoveryService } from '../services/project-discovery.service';
 
 export class ContextBuilder {
   static build(rootDir: string, targetDir?: string): { context: Context; isRealGit: boolean } {
     const absoluteRootDir = path.resolve(rootDir);
     const absoluteTargetDir = targetDir ? path.resolve(targetDir) : undefined;
+
+    // 0. Discover project-wide metadata
+    const projectMeta = ProjectDiscoveryService.discover(absoluteRootDir);
 
     // 1. Build import graph
     const importGraph = ImportGraphService.buildGraph(absoluteRootDir, absoluteTargetDir);
@@ -33,6 +37,7 @@ export class ContextBuilder {
       packageJson,
       readmeContent,
       envExampleKeys,
+      projectMeta,
     };
 
     return { context, isRealGit };

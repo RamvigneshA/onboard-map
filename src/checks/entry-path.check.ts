@@ -14,15 +14,8 @@ export class EntryPathCheck implements Check {
   async run(context: Context): Promise<CheckResult> {
     const graph = context.importGraph as AppImportGraph;
     
-    // Identify entry point candidates
-    const candidates = [
-      'src/main.tsx',
-      'src/main.ts',
-      'src/index.tsx',
-      'src/index.ts',
-      'index.html',
-      'src/App.tsx',
-    ];
+    // Identify entry point candidates dynamically from project metadata
+    const candidates = context.projectMeta.entryPoints;
 
     let entryPoint = '';
     for (const cand of candidates) {
