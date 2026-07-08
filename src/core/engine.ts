@@ -34,6 +34,7 @@ import { DocumentationCheck } from '../checks/documentation.check';
 import { EnvironmentCheck } from '../checks/environment.check';
 import { ProjectStructureCheck } from '../checks/project-structure.check';
 import { DependencyCheck } from '../checks/dependency.check';
+import { SecurityCheck } from '../checks/security.check';
 import { HealthScoreCheck } from '../checks/health-score.check';
 import { RecommendationsCheck } from '../checks/recommendations.check';
 
@@ -77,6 +78,7 @@ export class CodebaseEngine {
     new EnvironmentCheck(),
     new ProjectStructureCheck(),
     new DependencyCheck(),
+    new SecurityCheck(),
     new HealthScoreCheck(),
     new RecommendationsCheck(),
 

@@ -35,15 +35,18 @@ export class ScoringService {
     const hasTS = frameworks.some((f: any) => f.name === 'TypeScript');
     if (hasModernFramework) {
       frameworkScore = hasTS ? 10 : 8;
+    } else if (hasTS) {
+      frameworkScore = 7;
     }
 
     // 3. TypeScript (max 10)
     let tsScore = 0;
     const tsInfo = getDetails('typescript');
     if (tsInfo.isInstalled) {
-      tsScore += 5;
+      tsScore += 4;
       if (tsInfo.strict) tsScore += 3;
       if (tsInfo.noImplicitAny) tsScore += 2;
+      if (tsInfo.strictNullChecks) tsScore += 1;
     }
 
     // 4. Code Quality (max 10)
@@ -55,23 +58,20 @@ export class ScoringService {
       qualityScore += 2;
     }
 
-    // 5. Testing (max 15)
+    // 5. Testing (max 10)
     let testingScore = 0;
     const testingInfo = getDetails('testing-stack');
     const unitTools = testingInfo.unitTools || [];
     const e2eTools = testingInfo.e2eTools || [];
-    if (unitTools.includes('Vitest') || unitTools.includes('Jest')) {
-      testingScore += 10;
-    }
-    if (unitTools.includes('React Testing Library')) {
-      testingScore += 2;
+    if (unitTools.length > 0) {
+      testingScore += 6;
     }
     if (e2eTools.length > 0) {
-      testingScore += 3;
+      testingScore += 4;
     }
 
     // 6. Deployment (max 10)
-    let deploymentScore = 5;
+    let deploymentScore = 4;
     const deploymentInfo = getDetails('deployment');
     if (deploymentInfo.platforms && deploymentInfo.platforms.length > 0) {
       deploymentScore = 10;
@@ -87,19 +87,21 @@ export class ScoringService {
     // 8. Documentation (max 10)
     let docScore = 0;
     const docInfo = getDetails('documentation');
-    if (docInfo.hasReadme) docScore += 5;
+    if (docInfo.hasReadme) docScore += 6;
     if (docInfo.hasLicense) docScore += 2;
-    if (docInfo.hasChangelog) docScore += 2;
+    if (docInfo.hasChangelog) docScore += 1;
     if (docInfo.hasContributing) docScore += 1;
 
-    // 9. Security (max 5)
-    let securityScore = 5;
-    const envInfo = getDetails('environment');
-    const envMismatchInfo = getDetails('env-mismatch');
-    if (envMismatchInfo.missingVars && envMismatchInfo.missingVars.length > 0) {
-      securityScore -= 2;
+    // 9. Security (max 10)
+    let securityScore = 10;
+    const securityInfo = getDetails('security');
+    if (securityInfo.hasGitignore === false) {
+      securityScore -= 4;
     }
-    if (!envInfo.hasEnvExample) {
+    if (securityInfo.hasEnvIgnored === false) {
+      securityScore -= 4;
+    }
+    if (securityInfo.hasSecurityConfig === false) {
       securityScore -= 2;
     }
     securityScore = Math.max(0, securityScore);
@@ -111,18 +113,18 @@ export class ScoringService {
     if (structInfo.components) structureScore += 2;
     if (structInfo.hooks) structureScore += 2;
     if (structInfo.lib || structInfo.utils) structureScore += 2;
-    if (structInfo.tests) structureScore += 2;
+    if (structInfo.tests || structInfo.public) structureScore += 2;
 
     const categories: ScoreCategory[] = [
       { name: 'Project', score: projectScore, max: 10 },
       { name: 'Framework', score: frameworkScore, max: 10 },
       { name: 'TypeScript', score: tsScore, max: 10 },
       { name: 'Quality', score: qualityScore, max: 10 },
-      { name: 'Testing', score: testingScore, max: 15 },
+      { name: 'Testing', score: testingScore, max: 10 },
       { name: 'Deployment', score: deploymentScore, max: 10 },
       { name: 'CI/CD', score: cicdScore, max: 10 },
       { name: 'Documentation', score: docScore, max: 10 },
-      { name: 'Security', score: securityScore, max: 5 },
+      { name: 'Security', score: securityScore, max: 10 },
       { name: 'Structure', score: structureScore, max: 10 },
     ];
 

@@ -37,7 +37,7 @@ export class ProjectInfoCheck implements Check {
     }
 
     // 3. Detect Node Version
-    let nodeVersion = 'Any';
+    let nodeVersion = '⚠ Not specified';
     if (pkgJson.engines && typeof pkgJson.engines === 'object' && (pkgJson.engines as any).node) {
       nodeVersion = String((pkgJson.engines as any).node);
     } else {
@@ -45,13 +45,15 @@ export class ProjectInfoCheck implements Check {
       const nodeVersionPath = path.join(context.rootDir, '.node-version');
       if (fs.existsSync(nvmrcPath)) {
         try {
-          nodeVersion = fs.readFileSync(nvmrcPath, 'utf8').trim();
+          const content = fs.readFileSync(nvmrcPath, 'utf8').trim();
+          if (content) nodeVersion = content;
         } catch (e) {
           // ignore
         }
       } else if (fs.existsSync(nodeVersionPath)) {
         try {
-          nodeVersion = fs.readFileSync(nodeVersionPath, 'utf8').trim();
+          const content = fs.readFileSync(nodeVersionPath, 'utf8').trim();
+          if (content) nodeVersion = content;
         } catch (e) {
           // ignore
         }
@@ -63,8 +65,21 @@ export class ProjectInfoCheck implements Check {
     const repository = hasGit ? 'Git detected' : 'No Git repository';
 
     // 5. Detect monorepo vs single package
-    const isMonorepo = context.projectMeta.workspaceType !== 'none' || context.projectMeta.projectType === 'monorepo';
-    const structure = isMonorepo ? 'Monorepo' : 'Single package';
+    let workspaceType = '';
+    if (fs.existsSync(path.join(context.rootDir, 'nx.json'))) {
+      workspaceType = 'Nx';
+    } else if (fs.existsSync(path.join(context.rootDir, 'turbo.json'))) {
+      workspaceType = 'Turborepo';
+    } else if (fs.existsSync(path.join(context.rootDir, 'lerna.json'))) {
+      workspaceType = 'Lerna';
+    } else if (fs.existsSync(path.join(context.rootDir, 'pnpm-workspace.yaml'))) {
+      workspaceType = 'pnpm';
+    } else if (pkgJson.workspaces) {
+      workspaceType = 'npm Workspaces';
+    }
+
+    const structure = workspaceType ? `Monorepo (${workspaceType})` : 'Single Package Application';
+    const isMonorepo = !!workspaceType;
 
     return {
       id: this.id,

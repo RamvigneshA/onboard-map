@@ -63,7 +63,11 @@ export class StylingCheck implements Check {
     }
 
     // 8. Shadcn UI
-    const hasShadcn = fs.existsSync(path.join(context.rootDir, 'components.json'));
+    const hasComponentsJson = fs.existsSync(path.join(context.rootDir, 'components.json'));
+    const hasUiFolder = fs.existsSync(path.join(context.rootDir, 'components', 'ui')) ||
+                        fs.existsSync(path.join(context.rootDir, 'src', 'components', 'ui'));
+    const hasRadix = Object.keys(allDeps).some(d => d.startsWith('@radix-ui/'));
+    const hasShadcn = hasComponentsJson && hasUiFolder && hasRadix;
     if (hasShadcn) {
       detected.push('Shadcn UI');
     }
@@ -78,6 +82,9 @@ export class StylingCheck implements Check {
       details: {
         stylingTechs: detected,
         hasShadcn,
+        hasComponentsJson,
+        hasUiFolder,
+        hasRadix,
         hasTailwind: detected.includes('Tailwind CSS'),
         hasCssModules,
       },

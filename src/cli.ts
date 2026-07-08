@@ -8,6 +8,7 @@
 import { Command } from 'commander';
 import * as path from 'path';
 import * as fs from 'fs';
+import pc from 'picocolors';
 import { ContextBuilder } from './core/context';
 import { CodebaseEngine } from './core/engine';
 import { TerminalReporter } from './reporters/terminal.reporter';
@@ -61,15 +62,20 @@ program
       };
 
       // 3. Format and Output Report
+      const markdownReporter = new MarkdownReporter();
+      const mdContent = markdownReporter.render(results, meta);
+      const reportFile = path.join(targetPath, 'frontend-health-report.md');
+      fs.writeFileSync(reportFile, mdContent, 'utf8');
+
       if (options.json) {
         const jsonReporter = new JsonReporter();
         console.log(jsonReporter.render(results, meta));
       } else if (options.md) {
-        const markdownReporter = new MarkdownReporter();
-        console.log(markdownReporter.render(results, meta));
+        console.log(mdContent);
       } else {
         const terminalReporter = new TerminalReporter();
         console.log(terminalReporter.render(results, meta));
+        console.log(`\n  ${pc.green('✔')} Saved markdown report to ${pc.bold('frontend-health-report.md')}\n`);
       }
     } catch (err) {
       console.error('onboard-map analysis failed:');

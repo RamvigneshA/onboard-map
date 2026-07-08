@@ -92,11 +92,12 @@ export class DependencyCheck implements Check {
     }
 
     const summary = `${totalDeps} dependencies (${totalProd} production, ${totalDev} dev)`;
+    const severity = totalDeps > 100 ? 'warn' : 'info';
 
     return {
       id: this.id,
       title: 'Dependency Analysis',
-      severity: 'info',
+      severity,
       summary,
       details: {
         totalProd,

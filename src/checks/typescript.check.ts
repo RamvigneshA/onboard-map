@@ -22,6 +22,7 @@ export class TypeScriptCheck implements Check {
 
     let strict = false;
     let noImplicitAny = false;
+    let strictNullChecks = false;
     let baseUrl: string | undefined = undefined;
     let paths: Record<string, string[]> | undefined = undefined;
     let moduleResolution: string | undefined = undefined;
@@ -41,8 +42,9 @@ export class TypeScriptCheck implements Check {
         const options = config.compilerOptions || {};
 
         strict = !!options.strict;
-        // if strict is true, noImplicitAny is true by default, unless explicitly set to false
+        // if strict is true, noImplicitAny and strictNullChecks are true by default, unless explicitly set to false
         noImplicitAny = options.noImplicitAny !== undefined ? !!options.noImplicitAny : strict;
+        strictNullChecks = options.strictNullChecks !== undefined ? !!options.strictNullChecks : strict;
         baseUrl = options.baseUrl;
         paths = options.paths;
         moduleResolution = options.moduleResolution;
@@ -66,8 +68,10 @@ export class TypeScriptCheck implements Check {
         hasTsConfig,
         strict,
         noImplicitAny,
+        strictNullChecks,
         baseUrl,
         paths: paths ? Object.keys(paths) : [],
+        hasPaths: !!(paths && Object.keys(paths).length > 0),
         moduleResolution,
       },
     };

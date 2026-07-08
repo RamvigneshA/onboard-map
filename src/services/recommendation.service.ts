@@ -31,6 +31,7 @@ export class RecommendationService {
     // 2. React Testing Library
     const testingInfo = getDetails('testing-stack');
     const unitTools = testingInfo.unitTools || [];
+    const e2eTools = testingInfo.e2eTools || [];
     const hasRtl = unitTools.includes('React Testing Library');
     if (testingInfo.hasUnit && !hasRtl) {
       recommendations.push({
@@ -108,7 +109,7 @@ export class RecommendationService {
 
     // 9. Structure tests missing
     const structInfo = getDetails('project-structure');
-    if (!structInfo.tests) {
+    if (!structInfo.tests && (unitTools.length > 0 || e2eTools.length > 0)) {
       recommendations.push({
         id: 'add-tests-dir',
         title: 'Add a dedicated tests/ directory',
@@ -117,7 +118,27 @@ export class RecommendationService {
       });
     }
 
-    // 10. Duplicate dependencies
+    // 10. Completely missing tests
+    if (unitTools.length === 0 && e2eTools.length === 0) {
+      recommendations.push({
+        id: 'add-automated-tests',
+        title: 'Add automated tests',
+        why: 'No testing framework was detected. Automated tests (unit, integration, or E2E) prevent regressions and ensure code safety.',
+        severity: 'warn',
+      });
+    }
+
+    // 11. Missing CONTRIBUTING.md
+    if (docInfo.hasReadme && !docInfo.hasContributing) {
+      recommendations.push({
+        id: 'add-contributing',
+        title: 'Add CONTRIBUTING.md',
+        why: 'Contributing instructions guide developers on how to file issues, submit PRs, and run test suites.',
+        severity: 'info',
+      });
+    }
+
+    // 12. Duplicate dependencies
     const depInfo = getDetails('dependency');
     if (depInfo.duplicateDeps && depInfo.duplicateDeps.length > 0) {
       recommendations.push({
@@ -128,7 +149,7 @@ export class RecommendationService {
       });
     }
 
-    // 11. Unused dependencies
+    // 13. Unused dependencies
     if (depInfo.unusedDeps && depInfo.unusedDeps.length > 0) {
       recommendations.push({
         id: 'clean-unused-deps',
@@ -137,6 +158,14 @@ export class RecommendationService {
         severity: 'info',
       });
     }
+
+    // Sort: risk (Critical) first, warn (Warning) second, info (Suggestion) last
+    const severityRank = {
+      'risk': 1,
+      'warn': 2,
+      'info': 3,
+    };
+    recommendations.sort((a, b) => (severityRank[a.severity] || 3) - (severityRank[b.severity] || 3));
 
     return recommendations;
   }

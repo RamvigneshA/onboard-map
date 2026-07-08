@@ -52,7 +52,46 @@ export class TerminalReporter implements Reporter {
     lines.push(pc.dim('────────────────────────────────────────────'));
     lines.push('');
 
-    for (const res of results) {
+    const orderMap: Record<string, number> = {
+      'entry-path': -10,
+      'reading-path-by-feature': -9,
+      'high-risk': -8,
+      'circular-deps': -7,
+      'safe-to-practice': -6,
+      'ownership': -5,
+      'dead-ends': -4,
+      'env-mismatch': -3,
+      'readme-staleness': -2,
+      'largest-components': -1,
+
+      'project-info': 1,
+      'framework': 2,
+      'build-tool': 3,
+      'typescript': 4,
+      'styling': 5,
+      'form-library': 5.1,
+      'validation': 5.2,
+      'state-management': 6,
+      'testing-stack': 7,
+      'code-quality': 8,
+      'deployment': 9,
+      'ci-cd': 9.1,
+      'security': 10,
+      'documentation': 11,
+      'environment': 12,
+      'project-structure': 12.1,
+      'dependency': 13,
+      'health-score': 14,
+      'recommendations': 15,
+    };
+
+    const sortedResults = [...results].sort((a, b) => {
+      const orderA = orderMap[a.id] !== undefined ? orderMap[a.id] : 999;
+      const orderB = orderMap[b.id] !== undefined ? orderMap[b.id] : 999;
+      return orderA - orderB;
+    });
+
+    for (const res of sortedResults) {
       if (res.id === 'entry-path') {
         const chain = res.details.chain as string[];
         if (chain && chain.length > 0) {
@@ -236,9 +275,9 @@ export class TerminalReporter implements Reporter {
         lines.push(`   Name:            ${res.details.name}`);
         lines.push(`   Version:         ${res.details.version}`);
         lines.push(`   Package Manager: ${res.details.packageManager}`);
-        lines.push(`   Node Version:    ${res.details.nodeVersion || 'Not specified'}`);
+        lines.push(`   Node Version:    ${res.details.nodeVersion}`);
         lines.push(`   Git Repository:  ${res.details.hasGit ? pc.green('Present') : pc.yellow('Absent')}`);
-        lines.push(`   Workspace Type:  ${res.details.workspaceType}`);
+        lines.push(`   Structure:       ${pc.green('✔')} ${res.details.structure}`);
         lines.push('');
       }
 
@@ -247,7 +286,7 @@ export class TerminalReporter implements Reporter {
         if (list && list.length > 0) {
           lines.push(`🚀 ${pc.bold('FRAMEWORK & LANGUAGE')}`);
           for (const f of list) {
-            const label = f.version ? `${f.name} (${f.version})` : f.name;
+            const label = f.version ? `${f.name} ${f.version}` : f.name;
             lines.push(`   ${label}`);
           }
           lines.push('');
@@ -265,6 +304,7 @@ export class TerminalReporter implements Reporter {
         if (res.details.isInstalled) {
           lines.push(`   ${pc.green('✔')} Installed`);
           lines.push(`   ${res.details.strict ? pc.green('✔') : pc.yellow('⚠')} strict ${res.details.strict ? 'enabled' : 'disabled'}`);
+          lines.push(`   ${res.details.hasPaths ? pc.green('✔') : pc.yellow('⚠')} path aliases ${res.details.hasPaths ? 'configured' : 'not configured'}`);
           lines.push(`   ${res.details.noImplicitAny ? pc.green('✔') : pc.yellow('⚠')} noImplicitAny ${res.details.noImplicitAny ? 'enabled' : 'disabled'}`);
         } else {
           lines.push(`   ${pc.red('✖')} TypeScript not installed`);
@@ -273,14 +313,24 @@ export class TerminalReporter implements Reporter {
       }
 
       else if (res.id === 'styling') {
-        lines.push(`🎨 ${pc.bold('STYLING')}`);
-        lines.push(`   ${res.summary}`);
+        lines.push(`🎨 ${pc.bold('UI SYSTEM')}`);
+        lines.push(`   ${res.details.hasTailwind ? pc.green('✔') : pc.yellow('⚠')} Tailwind CSS`);
+        lines.push(`   ${res.details.hasShadcn ? pc.green('✔') : pc.yellow('⚠')} Shadcn UI`);
         lines.push('');
       }
 
       else if (res.id === 'state-management') {
         lines.push(`🧠 ${pc.bold('STATE MANAGEMENT')}`);
-        lines.push(`   ${res.summary}`);
+        if (res.details.states && res.details.states.length > 0) {
+          for (const s of res.details.states) {
+            lines.push(`   ${pc.green('✔')} ${s}`);
+          }
+        } else {
+          lines.push(`   No external state library detected.`);
+          lines.push('');
+          lines.push(`   Component state:`);
+          lines.push(`   ${res.details.hasComponentState ? pc.green('✔ Detected') : pc.yellow('⚠ Not detected')}`);
+        }
         lines.push('');
       }
 
@@ -328,7 +378,13 @@ export class TerminalReporter implements Reporter {
 
       else if (res.id === 'deployment') {
         lines.push(`🚀 ${pc.bold('DEPLOYMENT')}`);
-        lines.push(`   ${res.summary}`);
+        if (res.details.platforms && res.details.platforms.length > 0) {
+          for (const p of res.details.platforms) {
+            lines.push(`   ${pc.green('✔')} ${p} detected`);
+          }
+        } else {
+          lines.push(`   ${pc.yellow('⚠')} No deployment configuration detected`);
+        }
         lines.push('');
       }
 
@@ -344,6 +400,14 @@ export class TerminalReporter implements Reporter {
         lines.push('');
       }
 
+      else if (res.id === 'security') {
+        lines.push(`🔒 ${pc.bold('SECURITY')}`);
+        lines.push(`   ${res.details.hasGitignore ? pc.green('✔') : pc.red('✖')} .gitignore exists`);
+        lines.push(`   ${res.details.hasEnvIgnored ? pc.green('✔') : pc.red('✖')} env files ignored`);
+        lines.push(`   ${res.details.hasSecurityConfig ? pc.green('✔') : pc.yellow('⚠')} Security audit / Dependabot configured`);
+        lines.push('');
+      }
+
       else if (res.id === 'documentation') {
         lines.push(`📚 ${pc.bold('DOCUMENTATION')}`);
         lines.push(`   ${res.details.hasReadme ? pc.green('✔') : pc.red('✖')} README.md ${res.details.hasReadme ? 'present' : 'missing'}`);
@@ -354,7 +418,7 @@ export class TerminalReporter implements Reporter {
       }
 
       else if (res.id === 'environment') {
-        lines.push(`🔒 ${pc.bold('ENVIRONMENT')}`);
+        lines.push(`📧 ${pc.bold('ENVIRONMENT')}`);
         lines.push(`   ${res.details.hasEnvExample ? pc.green('✔') : pc.yellow('⚠')} .env.example ${res.details.hasEnvExample ? 'present' : 'missing'}`);
         lines.push(`   ${res.details.hasGitignore ? pc.green('✔') : pc.yellow('⚠')} .gitignore ${res.details.hasGitignore ? 'present' : 'missing'}`);
         lines.push(`   ${res.details.hasEditorconfig ? pc.green('✔') : pc.yellow('⚠')} .editorconfig ${res.details.hasEditorconfig ? 'present' : 'missing'}`);
@@ -371,21 +435,24 @@ export class TerminalReporter implements Reporter {
       }
 
       else if (res.id === 'dependency') {
-        lines.push(`📦 ${pc.bold('DEPENDENCY ANALYSIS')}`);
-        lines.push(`   Total Dependencies: ${res.details.totalDeps}`);
-        lines.push(`   Production: ${res.details.totalProd}`);
-        lines.push(`   Dev: ${res.details.totalDev}`);
+        lines.push(`📦 ${pc.bold('DEPENDENCY HEALTH')}`);
+        lines.push(`   Dependencies: ${res.details.totalDeps}`);
+        lines.push(`   Direct:       ${res.details.totalProd}`);
+        lines.push(`   Dev:          ${res.details.totalDev}`);
+        if (res.details.totalDeps > 100) {
+          lines.push(`   ${pc.yellow('⚠')} High dependency count (>100 packages)`);
+        }
         if (res.details.isDeep) {
           if (res.details.unusedDeps && res.details.unusedDeps.length > 0) {
             lines.push(`   Unused Production Dependencies:`);
             for (const d of res.details.unusedDeps) {
-              lines.push(`   - ${pc.yellow(d)}`);
+              lines.push(`     - ${pc.yellow(d)}`);
             }
           }
           if (res.details.duplicateDeps && res.details.duplicateDeps.length > 0) {
             lines.push(`   Duplicate Dependencies:`);
             for (const d of res.details.duplicateDeps) {
-              lines.push(`   - ${pc.red(d)}`);
+              lines.push(`     - ${pc.red(d)}`);
             }
           }
         }
@@ -412,8 +479,12 @@ export class TerminalReporter implements Reporter {
         if (recommendations && recommendations.length > 0) {
           lines.push(`💡 ${pc.bold('ACTIONABLE RECOMMENDATIONS')}`);
           for (const rec of recommendations) {
-            const icon = rec.severity === 'risk' ? pc.red('✖') : rec.severity === 'warn' ? pc.yellow('⚠') : pc.cyan('ℹ');
-            lines.push(`   ${icon} ${pc.bold(rec.title)}`);
+            const sevLabel = rec.severity === 'risk' 
+              ? `${pc.red('🔴 Critical')}` 
+              : rec.severity === 'warn' 
+                ? `${pc.yellow('🟡 Warning')}` 
+                : `${pc.cyan('🔵 Suggestion')}`;
+            lines.push(`   ${sevLabel} · ${pc.bold(rec.title)}`);
             lines.push(`     ${pc.dim('Why:')} ${rec.why}`);
           }
           lines.push('');

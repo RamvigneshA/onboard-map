@@ -47,49 +47,49 @@ export class FrameworkDetectorService {
                         fs.existsSync(path.join(context.rootDir, 'src', 'app'));
 
     if (allDeps['next'] || hasNextDir) {
-      const v = getMajorVersion('next');
+      const v = getVersion('next');
       frameworks.push({ name: 'Next.js', version: v });
     }
 
     // 2. React
     if (allDeps['react'] && !frameworks.some(f => f.name === 'Next.js')) {
-      const v = getMajorVersion('react');
+      const v = getVersion('react');
       frameworks.push({ name: 'React', version: v });
     }
 
     // 3. Angular
     if (allDeps['@angular/core'] || fs.existsSync(path.join(context.rootDir, 'angular.json'))) {
-      const v = getMajorVersion('@angular/core');
+      const v = getVersion('@angular/core');
       frameworks.push({ name: 'Angular', version: v });
     }
 
     // 4. Vue
     if (allDeps['vue']) {
-      const v = getMajorVersion('vue');
+      const v = getVersion('vue');
       frameworks.push({ name: 'Vue', version: v });
     }
 
     // 5. Svelte
     if (allDeps['svelte'] || allDeps['@sveltejs/kit']) {
-      const v = getMajorVersion('svelte') || getMajorVersion('@sveltejs/kit');
+      const v = getVersion('svelte') || getVersion('@sveltejs/kit');
       frameworks.push({ name: 'Svelte', version: v });
     }
 
     // 6. Astro
     if (allDeps['astro']) {
-      const v = getMajorVersion('astro');
+      const v = getVersion('astro');
       frameworks.push({ name: 'Astro', version: v });
     }
 
     // 7. Remix
     if (allDeps['@remix-run/react'] || allDeps['@remix-run/node']) {
-      const v = getMajorVersion('@remix-run/react') || getMajorVersion('@remix-run/node');
+      const v = getVersion('@remix-run/react') || getVersion('@remix-run/node');
       frameworks.push({ name: 'Remix', version: v });
     }
 
     // 8. TypeScript (Language)
     if (allDeps['typescript'] || fs.existsSync(path.join(context.rootDir, 'tsconfig.json'))) {
-      const v = getMajorVersion('typescript');
+      const v = getVersion('typescript');
       frameworks.push({ name: 'TypeScript', version: v });
     }
 

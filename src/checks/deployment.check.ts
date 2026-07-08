@@ -22,13 +22,20 @@ export class DeploymentCheck implements Check {
     // 1. Vercel
     const hasVercelConfig = fs.existsSync(path.join(context.rootDir, 'vercel.json'));
     const hasVercelDep = Object.keys(allDeps).some(d => d.startsWith('@vercel/'));
-    if (hasVercelConfig || hasVercelDep) {
+    const scripts = (pkgJson.scripts as Record<string, string>) || {};
+    const hasVercelScript = Object.entries(scripts).some(([key, val]) => 
+      key.toLowerCase().includes('vercel') || String(val).toLowerCase().includes('vercel')
+    );
+    if (hasVercelConfig || hasVercelDep || hasVercelScript) {
       detected.push('Vercel');
     }
 
     // 2. Netlify
     const hasNetlifyConfig = fs.existsSync(path.join(context.rootDir, 'netlify.toml'));
-    if (hasNetlifyConfig || allDeps['netlify-cli']) {
+    const hasNetlifyScript = Object.entries(scripts).some(([key, val]) => 
+      key.toLowerCase().includes('netlify') || String(val).toLowerCase().includes('netlify')
+    );
+    if (hasNetlifyConfig || allDeps['netlify-cli'] || hasNetlifyScript) {
       detected.push('Netlify');
     }
 
@@ -40,23 +47,30 @@ export class DeploymentCheck implements Check {
 
     // 4. Firebase Hosting
     const hasFirebaseConfig = fs.existsSync(path.join(context.rootDir, 'firebase.json'));
-    if (hasFirebaseConfig || allDeps['firebase-tools']) {
+    const hasFirebaseScript = Object.entries(scripts).some(([key, val]) => 
+      key.toLowerCase().includes('firebase') || String(val).toLowerCase().includes('firebase')
+    );
+    if (hasFirebaseConfig || allDeps['firebase-tools'] || hasFirebaseScript) {
       detected.push('Firebase');
     }
 
-    // 5. GitHub Pages
+    // 5. GitHub Pages / Actions
+    const hasGithubFolder = fs.existsSync(path.join(context.rootDir, '.github'));
     if (allDeps['gh-pages']) {
       detected.push('GitHub Pages');
+    }
+    if (hasGithubFolder) {
+      detected.push('GitHub Actions');
     }
 
     const summary = detected.length > 0
       ? `Configured for ${detected.join(', ')}`
-      : 'No explicit cloud hosting or deployment configs detected';
+      : '⚠ No deployment configuration detected';
 
     return {
       id: this.id,
       title: 'Deployment',
-      severity: 'info',
+      severity: detected.length > 0 ? 'info' : 'warn',
       summary,
       details: {
         platforms: detected,
@@ -65,6 +79,7 @@ export class DeploymentCheck implements Check {
         hasCloudflare: detected.includes('Cloudflare'),
         hasFirebase: detected.includes('Firebase'),
         hasGhPages: detected.includes('GitHub Pages'),
+        hasGithubFolder,
       },
     };
   }

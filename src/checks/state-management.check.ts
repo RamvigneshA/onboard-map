@@ -39,27 +39,9 @@ export class StateManagementCheck implements Check {
       detected.push('MobX');
     }
 
-    // 5. Context API
-    let hasContextApi = false;
-    const filesToScan = context.importGraph.files
-      .filter(f => f.path.endsWith('.tsx') || f.path.endsWith('.ts'))
-      .slice(0, 100); // scan up to 100 files for high reliability
-    for (const f of filesToScan) {
-      const fullPath = path.join(context.rootDir, f.path);
-      if (fs.existsSync(fullPath)) {
-        try {
-          const content = fs.readFileSync(fullPath, 'utf8');
-          if (content.includes('createContext') || content.includes('React.createContext')) {
-            hasContextApi = true;
-            break;
-          }
-        } catch (e) {
-          // ignore
-        }
-      }
-    }
-    if (hasContextApi) {
-      detected.push('Context API');
+    // 5. Recoil
+    if (allDeps['recoil']) {
+      detected.push('Recoil');
     }
 
     // 6. TanStack Query
@@ -72,7 +54,29 @@ export class StateManagementCheck implements Check {
       detected.push('Apollo Client');
     }
 
-    const summary = detected.length > 0 ? detected.join(', ') : 'React Component State (useState/useReducer)';
+    // 8. Component State (useState / useReducer)
+    let hasComponentState = false;
+    const filesToScan = context.importGraph.files
+      .filter(f => f.path.endsWith('.tsx') || f.path.endsWith('.ts'))
+      .slice(0, 100); // scan up to 100 files for high reliability
+    for (const f of filesToScan) {
+      const fullPath = path.join(context.rootDir, f.path);
+      if (fs.existsSync(fullPath)) {
+        try {
+          const content = fs.readFileSync(fullPath, 'utf8');
+          if (content.includes('useState') || content.includes('useReducer')) {
+            hasComponentState = true;
+            break;
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+
+    const summary = detected.length > 0 
+      ? detected.join(', ') 
+      : 'No external state library detected';
 
     return {
       id: this.id,
@@ -81,7 +85,7 @@ export class StateManagementCheck implements Check {
       summary,
       details: {
         states: detected,
-        hasContextApi,
+        hasComponentState,
       },
     };
   }
