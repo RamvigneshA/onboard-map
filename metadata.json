@@ -1,0 +1,6 @@
+{
+  "name": "Onboard Map",
+  "description": "An onboarding and architecture analyzer that parses a TypeScript codebase's import graph and git history to identify critical reading paths and risk hotspots.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

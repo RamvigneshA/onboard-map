@@ -1,0 +1,81 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { Check, CheckResult, Context } from '../models/types';
+
+// Default checks
+import { EntryPathCheck } from '../checks/entry-path.check';
+import { ReadingPathByFeatureCheck } from '../checks/reading-path-by-feature.check';
+import { HighRiskCheck } from '../checks/high-risk.check';
+import { CircularDepsCheck } from '../checks/circular-deps.check';
+import { SafeToPracticeCheck } from '../checks/safe-to-practice.check';
+import { OwnershipCheck } from '../checks/ownership.check';
+import { DeadEndsCheck } from '../checks/dead-ends.check';
+import { EnvMismatchCheck } from '../checks/env-mismatch.check';
+import { ReadmeStalenessCheck } from '../checks/readme-staleness.check';
+import { LargestComponentsCheck } from '../checks/largest-components.check';
+
+// Deep checks
+import { CouplingHotspotsCheck } from '../checks/deep/coupling-hotspots.check';
+import { BoundaryViolationsCheck } from '../checks/deep/boundary-violations.check';
+import { BusFactorCheck } from '../checks/deep/bus-factor.check';
+import { KnowledgeGapCheck } from '../checks/deep/knowledge-gap.check';
+import { AcceleratingChurnCheck } from '../checks/deep/accelerating-churn.check';
+import { BarrelBloatCheck } from '../checks/deep/barrel-bloat.check';
+import { DeepImportChainsCheck } from '../checks/deep/deep-import-chains.check';
+
+export class CodebaseEngine {
+  private checks: Check[] = [
+    // Default set
+    new EntryPathCheck(),
+    new ReadingPathByFeatureCheck(),
+    new HighRiskCheck(),
+    new CircularDepsCheck(),
+    new SafeToPracticeCheck(),
+    new OwnershipCheck(),
+    new DeadEndsCheck(),
+    new EnvMismatchCheck(),
+    new ReadmeStalenessCheck(),
+    new LargestComponentsCheck(),
+
+    // Deep set
+    new CouplingHotspotsCheck(),
+    new BoundaryViolationsCheck(),
+    new BusFactorCheck(),
+    new KnowledgeGapCheck(),
+    new AcceleratingChurnCheck(),
+    new BarrelBloatCheck(),
+    new DeepImportChainsCheck(),
+  ];
+
+  /**
+   * Run registered checks on context
+   */
+  async run(context: Context, options: { deep?: boolean } = {}): Promise<CheckResult[]> {
+    const runDeep = !!options.deep;
+    
+    // Filter checks: only run deep checks if --deep is requested
+    const checksToRun = this.checks.filter(c => !c.deep || runDeep);
+    
+    const results: CheckResult[] = [];
+    for (const check of checksToRun) {
+      try {
+        const result = await check.run(context);
+        results.push(result);
+      } catch (e) {
+        // Fallback result if check crashes
+        results.push({
+          id: check.id,
+          title: check.id.toUpperCase(),
+          severity: 'risk',
+          summary: `Check failed to run: ${e instanceof Error ? e.message : String(e)}`,
+          details: {},
+        });
+      }
+    }
+
+    return results;
+  }
+}
